@@ -5,12 +5,14 @@ import (
 	"strings"
 
 	"github.com/ericbg27/top10movies-api/src/utils/config"
+	"github.com/jackc/pgx"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 type Logger interface {
 	Print(v ...interface{})
+	Log(level pgx.LogLevel, msg string, data map[string]interface{})
 }
 
 type logger struct {
@@ -73,6 +75,17 @@ func GetLogger() Logger {
 
 func (l logger) Print(v ...interface{}) {
 	Info(fmt.Sprintf("%v", v))
+}
+
+func (l logger) Log(level pgx.LogLevel, msg string, data map[string]interface{}) {
+	fields := make([]zap.Field, len(data))
+	i := 0
+	for k, v := range data {
+		fields[i] = zap.Reflect(k, v)
+		i++
+	}
+
+	l.log.Info(msg, fields...)
 }
 
 func Info(msg string, tags ...zap.Field) {

@@ -6,4 +6,5 @@ import (
 
 func mapUrls() {
 	router.POST("/login", users.Login)
+	router.POST("/register", users.Create)
 }

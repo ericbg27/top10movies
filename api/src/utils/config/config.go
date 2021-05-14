@@ -16,9 +16,19 @@ type LoggerCfg struct {
 	LogOutput string `yaml:"log_output"`
 }
 
+type DatabaseCfg struct {
+	Host     string `yaml:"host"`
+	Port     uint16 `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DbName   string `yaml:"dbname"`
+	LogLevel string `yaml:"log_level"`
+}
+
 type Config struct {
-	Server ServerCfg `yaml:"server"`
-	Logger LoggerCfg `yaml:"logger"`
+	Server   ServerCfg   `yaml:"server"`
+	Logger   LoggerCfg   `yaml:"logger"`
+	Database DatabaseCfg `yaml:"database"`
 }
 
 var (
