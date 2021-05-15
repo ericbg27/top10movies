@@ -8,14 +8,14 @@ import (
 type usersService struct{}
 
 type usersServiceInterface interface {
-	CreateUser(users.User) (*users.User, rest_errors.RestErr)
+	CreateUser(users.User) (*users.User, *rest_errors.RestErr)
 }
 
 var (
 	UsersService usersServiceInterface = &usersService{}
 )
 
-func (s *usersService) CreateUser(user users.User) (*users.User, rest_errors.RestErr) {
+func (s *usersService) CreateUser(user users.User) (*users.User, *rest_errors.RestErr) {
 	if err := user.Validate(); err != nil {
 		return nil, err
 	}

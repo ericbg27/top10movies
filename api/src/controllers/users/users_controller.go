@@ -22,7 +22,7 @@ func Create(c *gin.Context) {
 	var user users.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		restErr := rest_errors.NewBadRequestError("Invalid JSON body")
-		c.JSON(restErr.Status(), restErr)
+		c.JSON(restErr.Status, restErr)
 
 		return
 	}
@@ -32,7 +32,7 @@ func Create(c *gin.Context) {
 
 	result, saveErr := users_service.UsersService.CreateUser(user)
 	if saveErr != nil {
-		c.JSON(saveErr.Status(), saveErr)
+		c.JSON(saveErr.Status, saveErr)
 
 		return
 	}

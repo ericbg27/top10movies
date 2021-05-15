@@ -13,7 +13,7 @@ const (
 	queryInsertUserName = "insert-user-query"
 )
 
-func (user *User) Save() rest_errors.RestErr {
+func (user *User) Save() *rest_errors.RestErr {
 	_, err := users_db.Client.Prepare(queryInsertUserName, queryInsertUser)
 	if err != nil {
 		logger.Error("Error when trying to prepare save user statement", err)
