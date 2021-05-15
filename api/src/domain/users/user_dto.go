@@ -1,6 +1,7 @@
 package users
 
 import (
+	"net/mail"
 	"strings"
 
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
@@ -29,6 +30,11 @@ func (user *User) Validate() rest_errors.RestErr {
 
 	user.Email = strings.TrimSpace(user.Email)
 	if user.Email == "" {
+		return rest_errors.NewBadRequestError("Invalid email address")
+	}
+
+	_, err := mail.ParseAddress(user.Email)
+	if err != nil {
 		return rest_errors.NewBadRequestError("Invalid email address")
 	}
 
