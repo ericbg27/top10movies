@@ -23,27 +23,44 @@ var (
 	log logger
 )
 
+const (
+	encodingString = "json"
+	levelKey       = "level"
+	timeKey        = "time"
+	messageKey     = "message"
+)
+
 func init() {
 	cfg := config.GetConfig()
 
+	var err error
+	log.log, err = setupLogger(cfg)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func setupLogger(c *config.Config) (*zap.Logger, error) {
 	logConfig := zap.Config{
-		OutputPaths: []string{getOutput(*cfg)},
-		Level:       zap.NewAtomicLevelAt(getLevel(*cfg)),
-		Encoding:    "json",
+		OutputPaths: []string{getOutput(*c)},
+		Level:       zap.NewAtomicLevelAt(getLevel(*c)),
+		Encoding:    encodingString,
 		EncoderConfig: zapcore.EncoderConfig{
-			LevelKey:     "level",
-			TimeKey:      "time",
-			MessageKey:   "msg",
+			LevelKey:     levelKey,
+			TimeKey:      timeKey,
+			MessageKey:   messageKey,
 			EncodeTime:   zapcore.ISO8601TimeEncoder,
 			EncodeLevel:  zapcore.LowercaseLevelEncoder,
 			EncodeCaller: zapcore.ShortCallerEncoder,
 		},
 	}
 
-	var err error
-	if log.log, err = logConfig.Build(); err != nil {
-		panic(err)
+	l, err := logConfig.Build()
+	if err != nil {
+		return nil, err
 	}
+
+	return l, nil
 }
 
 func getLevel(cfg config.Config) zapcore.Level {
