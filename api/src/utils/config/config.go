@@ -7,50 +7,69 @@ import (
 )
 
 type ServerCfg struct {
-	Port string `yaml:"port"`
-	Host string `yaml:"host"`
+	Port string `mapstructure:"port"`
+	Host string `mapstructure:"host"`
 }
 
 type LoggerCfg struct {
-	LogLevel  string `yaml:"log_level"`
-	LogOutput string `yaml:"log_output"`
+	LogLevel  string `mapstructure:"log_level"`
+	LogOutput string `mapstructure:"log_output"`
 }
 
 type DatabaseCfg struct {
-	Host     string `yaml:"host"`
-	Port     uint16 `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	DbName   string `yaml:"dbname"`
-	LogLevel string `yaml:"log_level"`
+	Host     string `mapstructure:"host"`
+	Port     uint16 `mapstructure:"port"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	DbName   string `mapstructure:"dbname"`
+	LogLevel string `mapstructure:"log_level"`
 }
 
 type Config struct {
-	Server   ServerCfg   `yaml:"server"`
-	Logger   LoggerCfg   `yaml:"logger"`
-	Database DatabaseCfg `yaml:"database"`
+	Server   ServerCfg   `mapstructure:"server"`
+	Logger   LoggerCfg   `mapstructure:"logger"`
+	Database DatabaseCfg `mapstructure:"database"`
 }
 
 var (
-	cfg Config
+	cfg *Config
+)
+
+const (
+	configName = "config"
+	configType = "yaml"
+	configPath = "$HOME/configs"
 )
 
 func init() {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("$HOME/configs")
+	var err error
 
-	err := viper.ReadInConfig()
+	cfg, err = setupConfig(configName, configType, configPath)
 	if err != nil {
-		panic(fmt.Errorf("Fatal error in configuration file: %s", err))
-	}
-
-	err = viper.Unmarshal(&cfg)
-	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("fatal error in configuration file: %s", err))
 	}
 }
 
-func GetConfig() Config {
+func setupConfig(cname, ctype, cpath string) (*Config, error) {
+	var c *Config
+
+	viper.SetConfigName(cname)
+	viper.SetConfigType(ctype)
+	viper.AddConfigPath(cpath)
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	err = viper.Unmarshal(&c)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func GetConfig() *Config {
 	return cfg
 }

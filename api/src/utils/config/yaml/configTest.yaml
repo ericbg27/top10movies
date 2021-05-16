@@ -1,0 +1,15 @@
+server:
+  host: "localhost"
+  port: "8080"
+
+logger:
+  log_level: "Info"
+  log_output: ""
+  
+database:
+  host: "localhost"
+  port: 5000
+  user: "eric"
+  password: "1234"
+  dbname: "dbtest"
+  log_level: "info"

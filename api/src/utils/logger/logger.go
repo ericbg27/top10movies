@@ -27,8 +27,8 @@ func init() {
 	cfg := config.GetConfig()
 
 	logConfig := zap.Config{
-		OutputPaths: []string{getOutput(cfg)},
-		Level:       zap.NewAtomicLevelAt(getLevel(cfg)),
+		OutputPaths: []string{getOutput(*cfg)},
+		Level:       zap.NewAtomicLevelAt(getLevel(*cfg)),
 		Encoding:    "json",
 		EncoderConfig: zapcore.EncoderConfig{
 			LevelKey:     "level",
