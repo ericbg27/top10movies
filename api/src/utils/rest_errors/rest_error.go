@@ -11,8 +11,15 @@ type RestErr struct {
 	Err     string `json:"error"`
 }
 
+const (
+	errorMessage              = "message: %s - status: %d - error: %s"
+	badRequestString          = "bad_request"
+	notFoundString            = "not_found"
+	internalServerErrorString = "internal_server_error"
+)
+
 func (r RestErr) Error() string {
-	return fmt.Sprintf("message: %s - status: %d - error: %s", r.Message, r.Status, r.Err)
+	return fmt.Sprintf(errorMessage, r.Message, r.Status, r.Err)
 }
 
 func NewRestError(message string, status int, err string) *RestErr {
@@ -27,7 +34,7 @@ func NewBadRequestError(message string) *RestErr {
 	return &RestErr{
 		Message: message,
 		Status:  http.StatusBadRequest,
-		Err:     "bad_request",
+		Err:     badRequestString,
 	}
 }
 
@@ -35,7 +42,7 @@ func NewNotFoundError(message string) *RestErr {
 	return &RestErr{
 		Message: message,
 		Status:  http.StatusNotFound,
-		Err:     "not_found",
+		Err:     notFoundString,
 	}
 }
 
@@ -43,6 +50,6 @@ func NewInternalServerError(message string) *RestErr {
 	return &RestErr{
 		Message: message,
 		Status:  http.StatusInternalServerError,
-		Err:     "internal_server_error",
+		Err:     internalServerErrorString,
 	}
 }

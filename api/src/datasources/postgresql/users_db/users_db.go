@@ -20,9 +20,11 @@ var (
 	loglevel = config.GetConfig().Database.LogLevel
 )
 
-func init() {
-	//connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", user, password, host, port, dbname)
+/*func init() {
+	setupDbConnection()
+}*/
 
+func SetupDbConnection() {
 	var connconfig pgx.ConnPoolConfig
 	connconfig.Host = host
 	connconfig.Port = port

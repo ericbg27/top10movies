@@ -25,12 +25,14 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	savedUser, getErr := users_service.UsersService.GetUser(user)
+	result, getErr := users_service.UsersService.GetUser(user)
 	if getErr != nil {
 		c.JSON(getErr.Status, getErr)
 
 		return
 	}
+
+	savedUser := result.(users.User)
 
 	err := bcrypt.CompareHashAndPassword([]byte(savedUser.Password), []byte(user.Password))
 	if err != nil {
@@ -74,7 +76,9 @@ func Create(c *gin.Context) {
 		return
 	}
 
-	result.Password = ""
+	newUser := result.(users.User)
 
-	c.JSON(http.StatusCreated, &result)
+	newUser.Password = ""
+
+	c.JSON(http.StatusCreated, newUser)
 }
