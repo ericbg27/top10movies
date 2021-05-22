@@ -26,21 +26,23 @@ var (
 
 type usersServiceMock struct{}
 
-func (u *usersServiceMock) CreateUser(user users.User) (*users.User, *rest_errors.RestErr) {
-	if _, ok := mockDb[user.Email]; ok {
+func (u *usersServiceMock) CreateUser(user users.UserInterface) (users.UserInterface, *rest_errors.RestErr) {
+	usr := user.(*users.User)
+	if _, ok := mockDb[usr.Email]; ok {
 		return nil, rest_errors.NewInternalServerError("Error when trying to save user")
 	}
 
-	user.DateCreated = now
-	user.ID = 2
+	usr.DateCreated = now
+	usr.ID = 2
 
-	return &user, nil
+	return usr, nil
 }
 
-func (u *usersServiceMock) GetUser(user users.User) (*users.User, *rest_errors.RestErr) {
-	if savedPassword, ok := mockDb[user.Email]; ok {
+func (u *usersServiceMock) GetUser(user users.UserInterface) (users.UserInterface, *rest_errors.RestErr) {
+	usr := user.(*users.User)
+	if savedPassword, ok := mockDb[usr.Email]; ok {
 		savedUser := users.User{
-			Email:    user.Email,
+			Email:    usr.Email,
 			Password: savedPassword,
 		}
 

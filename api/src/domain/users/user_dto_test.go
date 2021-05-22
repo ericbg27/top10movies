@@ -19,13 +19,15 @@ func TestValidateSuccess(t *testing.T) {
 		Password:  "   12345   ",
 	}
 
-	err := u.Validate()
+	result, err := u.Validate()
+
+	validatedUser := result.(User)
 
 	assert.Nil(t, err)
-	assert.EqualValues(t, "John", u.FirstName)
-	assert.EqualValues(t, "Doe", u.LastName)
-	assert.EqualValues(t, "johndoe@gmail.com", u.Email)
-	assert.EqualValues(t, "12345", u.Password)
+	assert.EqualValues(t, "John", validatedUser.FirstName)
+	assert.EqualValues(t, "Doe", validatedUser.LastName)
+	assert.EqualValues(t, "johndoe@gmail.com", validatedUser.Email)
+	assert.EqualValues(t, "12345", validatedUser.Password)
 }
 
 func TestValidateNameError(t *testing.T) {
@@ -34,16 +36,18 @@ func TestValidateNameError(t *testing.T) {
 		LastName:  "LastName",
 	}
 
-	err := u.Validate()
+	result, err := u.Validate()
 
 	assert.NotNil(t, err)
+	assert.Nil(t, result)
 
 	u.FirstName = "FirstName"
 	u.LastName = "     "
 
-	err = u.Validate()
+	result, err = u.Validate()
 
 	assert.NotNil(t, err)
+	assert.Nil(t, result)
 }
 
 func TestValidateEmailError(t *testing.T) {
@@ -53,15 +57,17 @@ func TestValidateEmailError(t *testing.T) {
 		Email:     "",
 	}
 
-	err := u.Validate()
+	result, err := u.Validate()
 
 	assert.NotNil(t, err)
+	assert.Nil(t, result)
 
 	u.Email = "johndoe#email.com"
 
-	u.Validate()
+	result, err = u.Validate()
 
 	assert.NotNil(t, err)
+	assert.Nil(t, result)
 }
 
 func TestValidatePasswordError(t *testing.T) {
@@ -72,7 +78,8 @@ func TestValidatePasswordError(t *testing.T) {
 		Password:  "",
 	}
 
-	err := u.Validate()
+	result, err := u.Validate()
 
 	assert.NotNil(t, err)
+	assert.Nil(t, result)
 }

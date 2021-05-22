@@ -16,24 +16,25 @@ const (
 	queryGetUserName = "get-user-query"
 )
 
-func (user *User) Get() *rest_errors.RestErr {
+func (user User) Get() (UserInterface, *rest_errors.RestErr) {
+	savedUser := user
 	_, err := users_db.Client.Prepare(queryGetUserName, queryGetUser)
 	if err != nil {
 		logger.Error("Error when trying to prepare get user statement", err)
-		return rest_errors.NewInternalServerError("Error when trying to get user")
+		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
 	}
 
 	result := users_db.Client.QueryRow(queryGetUserName, user.Email)
-	err = result.Scan(&user.ID, &user.FirstName, &user.Status, &user.Password)
+	err = result.Scan(&savedUser.ID, &savedUser.FirstName, &savedUser.Status, &savedUser.Password)
 	if err != nil {
 		logger.Error("Error when trying to get user in database", err)
-		return rest_errors.NewInternalServerError("Error when trying to get user")
+		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
 	}
 
-	return nil
+	return savedUser, nil
 }
 
-func (user *User) Save() *rest_errors.RestErr {
+func (user User) Save() *rest_errors.RestErr {
 	_, err := users_db.Client.Prepare(queryInsertUserName, queryInsertUser)
 	if err != nil {
 		logger.Error("Error when trying to prepare save user statement", err)

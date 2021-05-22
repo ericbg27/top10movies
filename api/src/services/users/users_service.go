@@ -8,30 +8,36 @@ import (
 type usersService struct{}
 
 type usersServiceInterface interface {
-	CreateUser(users.User) (*users.User, *rest_errors.RestErr)
-	GetUser(users.User) (*users.User, *rest_errors.RestErr)
+	CreateUser(users.UserInterface) (users.UserInterface, *rest_errors.RestErr)
+	GetUser(users.UserInterface) (users.UserInterface, *rest_errors.RestErr)
 }
 
 var (
 	UsersService usersServiceInterface = &usersService{}
 )
 
-func (s *usersService) GetUser(user users.User) (*users.User, *rest_errors.RestErr) {
-	if err := user.Get(); err != nil {
+func (s *usersService) GetUser(user users.UserInterface) (users.UserInterface, *rest_errors.RestErr) {
+	var savedUser users.UserInterface
+	var err *rest_errors.RestErr
+
+	if savedUser, err = user.Get(); err != nil {
 		return nil, err
 	}
 
-	return &user, nil
+	return savedUser, nil
 }
 
-func (s *usersService) CreateUser(user users.User) (*users.User, *rest_errors.RestErr) {
-	if err := user.Validate(); err != nil {
+func (s *usersService) CreateUser(user users.UserInterface) (users.UserInterface, *rest_errors.RestErr) {
+	var validatedUser users.UserInterface
+	var err *rest_errors.RestErr
+
+	if validatedUser, err = user.Validate(); err != nil {
 		return nil, err
 	}
 
-	if err := user.Save(); err != nil {
+	if err = validatedUser.Save(); err != nil {
 		return nil, err
 	}
 
-	return &user, nil
+	return validatedUser, nil
 }
