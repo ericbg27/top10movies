@@ -27,7 +27,7 @@ var (
 type usersServiceMock struct{}
 
 func (u *usersServiceMock) CreateUser(user users.UserInterface) (users.UserInterface, *rest_errors.RestErr) {
-	usr := user.(*users.User)
+	usr := user.(users.User)
 	if _, ok := mockDb[usr.Email]; ok {
 		return nil, rest_errors.NewInternalServerError("Error when trying to save user")
 	}
@@ -39,14 +39,14 @@ func (u *usersServiceMock) CreateUser(user users.UserInterface) (users.UserInter
 }
 
 func (u *usersServiceMock) GetUser(user users.UserInterface) (users.UserInterface, *rest_errors.RestErr) {
-	usr := user.(*users.User)
+	usr := user.(users.User)
 	if savedPassword, ok := mockDb[usr.Email]; ok {
 		savedUser := users.User{
 			Email:    usr.Email,
 			Password: savedPassword,
 		}
 
-		return &savedUser, nil
+		return savedUser, nil
 	}
 
 	return nil, rest_errors.NewNotFoundError("User not found")
