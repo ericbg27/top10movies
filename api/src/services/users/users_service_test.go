@@ -11,10 +11,13 @@ import (
 )
 
 type userMock struct {
-	valid   bool
-	canGet  bool
-	canSave bool
-	name    string
+	valid     bool
+	canGet    bool
+	canSave   bool
+	canUpdate bool
+	FirstName string
+	LastName  string
+	Email     string
 }
 
 func (u userMock) Validate() (users.UserInterface, *rest_errors.RestErr) {
@@ -34,7 +37,21 @@ func (u userMock) Get() (users.UserInterface, *rest_errors.RestErr) {
 		return nil, rest_errors.NewInternalServerError("Failed to get user")
 	}
 
-	savedUser.name = "Test User"
+	savedUser.FirstName = "Test User"
+
+	return savedUser, nil
+}
+
+func (u userMock) GetById() (users.UserInterface, *rest_errors.RestErr) {
+	savedUser := u
+
+	if savedUser.canGet == false {
+		return nil, rest_errors.NewInternalServerError("Failed to get user")
+	}
+
+	savedUser.FirstName = "Current Name"
+	savedUser.LastName = "Current Last Name"
+	savedUser.Email = "Current email"
 
 	return savedUser, nil
 }
@@ -45,6 +62,32 @@ func (u userMock) Save() *rest_errors.RestErr {
 	}
 
 	return nil
+}
+
+func (u userMock) Update(newUser users.UserInterface, isPartial bool) (users.UserInterface, *rest_errors.RestErr) {
+	if u.canUpdate == false {
+		return nil, rest_errors.NewInternalServerError("Failed to update user")
+	}
+
+	toUpdateUser := newUser.(userMock)
+
+	if isPartial {
+		if toUpdateUser.FirstName != "" {
+			u.FirstName = toUpdateUser.FirstName
+		}
+		if toUpdateUser.LastName != "" {
+			u.LastName = toUpdateUser.LastName
+		}
+		if toUpdateUser.Email != "" {
+			u.Email = toUpdateUser.Email
+		}
+	} else {
+		u.FirstName = toUpdateUser.FirstName
+		u.LastName = toUpdateUser.LastName
+		u.Email = toUpdateUser.Email
+	}
+
+	return u, nil
 }
 
 func TestMain(m *testing.M) {
@@ -62,8 +105,8 @@ func TestGetUserSuccess(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.NotNil(t, savedUser)
-	assert.EqualValues(t, "Test User", savedUser.name)
-	assert.EqualValues(t, "", user.name)
+	assert.EqualValues(t, "Test User", savedUser.FirstName)
+	assert.EqualValues(t, "", user.FirstName)
 }
 
 func TestGetUserFail(t *testing.T) {
@@ -83,7 +126,7 @@ func TestCreateUserSuccess(t *testing.T) {
 	var user userMock
 	user.valid = true
 	user.canSave = true
-	user.name = "User to create"
+	user.FirstName = "User to create"
 
 	result, err := UsersService.CreateUser(user)
 
@@ -91,7 +134,7 @@ func TestCreateUserSuccess(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.NotNil(t, createdUser)
-	assert.EqualValues(t, "User to create", createdUser.name)
+	assert.EqualValues(t, "User to create", createdUser.FirstName)
 }
 
 func TestCreateUserInvalidUser(t *testing.T) {
@@ -120,3 +163,45 @@ func TestCreateUserFail(t *testing.T) {
 	assert.EqualValues(t, http.StatusInternalServerError, err.Status)
 	assert.EqualValues(t, "internal_server_error", err.Err)
 }
+
+func TestUpdateUserSuccess(t *testing.T) {
+	var user userMock
+	user.valid = true
+	user.canGet = true
+	user.canUpdate = true
+	user.FirstName = "Test Name"
+	user.LastName = "Test Last Name"
+	user.Email = "test@email.com"
+
+	result, err := UsersService.UpdateUser(user, false)
+
+	updatedUser := result.(userMock)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, result)
+	assert.EqualValues(t, "Test Name", updatedUser.FirstName)
+	assert.EqualValues(t, "Test Last Name", updatedUser.LastName)
+	assert.EqualValues(t, "test@email.com", updatedUser.Email)
+}
+
+func TestPartialUpdateUserSuccess(t *testing.T) {
+	var user userMock
+	user.valid = true
+	user.canGet = true
+	user.canUpdate = true
+	user.FirstName = ""
+	user.LastName = "Test Last Name"
+	user.Email = "test@email.com"
+
+	result, err := UsersService.UpdateUser(user, true)
+
+	updatedUser := result.(userMock)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, result)
+	assert.EqualValues(t, "Current Name", updatedUser.FirstName)
+	assert.EqualValues(t, "Test Last Name", updatedUser.LastName)
+	assert.EqualValues(t, "test@email.com", updatedUser.Email)
+}
+
+// TODO: UpdateUser method failure tests

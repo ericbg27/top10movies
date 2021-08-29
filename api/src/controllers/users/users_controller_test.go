@@ -52,6 +52,11 @@ func (u *usersServiceMock) GetUser(user users.UserInterface) (users.UserInterfac
 	return nil, rest_errors.NewNotFoundError("User not found")
 }
 
+func (u *usersServiceMock) UpdateUser(user users.UserInterface, isPartial bool) (users.UserInterface, *rest_errors.RestErr) {
+	// TODO
+	return nil, nil
+}
+
 func PrepareTest(request []byte, method string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	c, _ = gin.CreateTestContext(w)
@@ -264,3 +269,5 @@ func TestCreateSaveError(t *testing.T) {
 	assert.EqualValues(t, http.StatusInternalServerError, receivedResponse.Status)
 	assert.EqualValues(t, receivedResponse.Err, "internal_server_error")
 }
+
+// TODO: Update function tests

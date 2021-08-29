@@ -14,6 +14,12 @@ const (
 
 	queryGetUser     = "SELECT id, first_name, status, password FROM users WHERE email=$1;"
 	queryGetUserName = "get-user-query"
+
+	queryGetUserById     = "SELECT first_name, last_name, email, status, password FROM users WHERE id=$1;"
+	queryGetUserByIdName = "get-user-by-id-query"
+
+	queryUpdateUser     = "UPDATE users SET first_name=$1, last_name=$2, email=$3 WHERE id=$4;"
+	queryUpdateUserName = "update-user-query"
 )
 
 func (user User) Get() (UserInterface, *rest_errors.RestErr) {
@@ -28,6 +34,24 @@ func (user User) Get() (UserInterface, *rest_errors.RestErr) {
 	err = result.Scan(&savedUser.ID, &savedUser.FirstName, &savedUser.Status, &savedUser.Password)
 	if err != nil {
 		logger.Error("Error when trying to get user in database", err)
+		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
+	}
+
+	return savedUser, nil
+}
+
+func (user User) GetById() (UserInterface, *rest_errors.RestErr) {
+	savedUser := user
+	_, err := users_db.Client.Prepare(queryGetUserByIdName, queryGetUserById)
+	if err != nil {
+		logger.Error("Error when trying to prepare get user by id statement", err)
+		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
+	}
+
+	result := users_db.Client.QueryRow(queryGetUserByIdName, user.ID)
+	err = result.Scan(&savedUser.FirstName, &savedUser.LastName, &savedUser.Email, &savedUser.Status, &savedUser.Password)
+	if err != nil {
+		logger.Error("Error when trying to get user by id in database", err)
 		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
 	}
 
@@ -50,4 +74,40 @@ func (user User) Save() *rest_errors.RestErr {
 	logger.Info(fmt.Sprintf("Saved user in the database. Rows affected: %d", result.RowsAffected()))
 
 	return nil
+}
+
+func (user User) Update(newUser UserInterface, isPartial bool) (UserInterface, *rest_errors.RestErr) {
+	toUpdateUser := newUser.(User)
+
+	if isPartial {
+		if toUpdateUser.FirstName != "" {
+			user.FirstName = toUpdateUser.FirstName
+		}
+		if toUpdateUser.LastName != "" {
+			user.LastName = toUpdateUser.LastName
+		}
+		if toUpdateUser.Email != "" {
+			user.Email = toUpdateUser.Email
+		}
+	} else {
+		user.FirstName = toUpdateUser.FirstName
+		user.LastName = toUpdateUser.LastName
+		user.Email = toUpdateUser.Email
+	}
+
+	_, err := users_db.Client.Prepare(queryUpdateUserName, queryUpdateUser)
+	if err != nil {
+		logger.Error("Error when trying to prepare update user statement", err)
+		return nil, rest_errors.NewInternalServerError("Error when trying to update user")
+	}
+
+	result, err := users_db.Client.Exec(queryUpdateUserName, user.FirstName, user.LastName, user.Email, user.ID)
+	if err != nil {
+		logger.Error("Error when trying to update user in database", err)
+		return nil, rest_errors.NewInternalServerError("Error when trying to update user")
+	}
+
+	logger.Info(fmt.Sprintf("Updated user in the database. Rows affected: %d", result.RowsAffected()))
+
+	return user, nil
 }

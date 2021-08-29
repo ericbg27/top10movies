@@ -10,6 +10,7 @@ type usersService struct{}
 type usersServiceInterface interface {
 	CreateUser(users.UserInterface) (users.UserInterface, *rest_errors.RestErr)
 	GetUser(users.UserInterface) (users.UserInterface, *rest_errors.RestErr)
+	UpdateUser(users.UserInterface, bool) (users.UserInterface, *rest_errors.RestErr)
 }
 
 var (
@@ -40,4 +41,20 @@ func (s *usersService) CreateUser(user users.UserInterface) (users.UserInterface
 	}
 
 	return validatedUser, nil
+}
+
+func (s *usersService) UpdateUser(user users.UserInterface, isPartial bool) (users.UserInterface, *rest_errors.RestErr) {
+	var currentUser users.UserInterface
+	var err *rest_errors.RestErr
+
+	if currentUser, err = user.GetById(); err != nil {
+		return nil, err
+	}
+
+	var updatedUser users.UserInterface
+	if updatedUser, err = currentUser.Update(user, isPartial); err != nil {
+		return nil, err
+	}
+
+	return updatedUser, nil
 }
