@@ -46,7 +46,7 @@ func (u userMock) GetById() (users.UserInterface, *rest_errors.RestErr) {
 	savedUser := u
 
 	if savedUser.canGet == false {
-		return nil, rest_errors.NewInternalServerError("Failed to get user")
+		return nil, rest_errors.NewInternalServerError("Failed to get user by ID")
 	}
 
 	savedUser.FirstName = "Current Name"
@@ -65,11 +65,18 @@ func (u userMock) Save() *rest_errors.RestErr {
 }
 
 func (u userMock) Update(newUser users.UserInterface, isPartial bool) (users.UserInterface, *rest_errors.RestErr) {
+	var validatedNewUser users.UserInterface
+	var err *rest_errors.RestErr
+
+	if validatedNewUser, err = newUser.Validate(); err != nil {
+		return nil, err
+	}
+
 	if u.canUpdate == false {
 		return nil, rest_errors.NewInternalServerError("Failed to update user")
 	}
 
-	toUpdateUser := newUser.(userMock)
+	toUpdateUser := validatedNewUser.(userMock)
 
 	if isPartial {
 		if toUpdateUser.FirstName != "" {
@@ -204,4 +211,46 @@ func TestPartialUpdateUserSuccess(t *testing.T) {
 	assert.EqualValues(t, "test@email.com", updatedUser.Email)
 }
 
-// TODO: UpdateUser method failure tests
+func TestUpdateUserInvalidUserID(t *testing.T) {
+	var user userMock
+	user.valid = true
+	user.canGet = false
+	user.canUpdate = true
+
+	result, err := UsersService.UpdateUser(user, false)
+
+	assert.Nil(t, result)
+	assert.NotNil(t, err)
+	assert.EqualValues(t, http.StatusInternalServerError, err.Status)
+	assert.EqualValues(t, "Failed to get user by ID", err.Message)
+	assert.EqualValues(t, "internal_server_error", err.Err)
+}
+
+func TestUpdateUserUpdateError(t *testing.T) {
+	var user userMock
+	user.valid = true
+	user.canGet = true
+	user.canUpdate = false
+
+	result, err := UsersService.UpdateUser(user, false)
+
+	assert.Nil(t, result)
+	assert.NotNil(t, err)
+	assert.EqualValues(t, http.StatusInternalServerError, err.Status)
+	assert.EqualValues(t, "Failed to update user", err.Message)
+	assert.EqualValues(t, "internal_server_error", err.Err)
+}
+
+func TestUpdateUserInvalidUser(t *testing.T) {
+	var user userMock
+	user.valid = false
+	user.canGet = true
+
+	result, err := UsersService.UpdateUser(user, false)
+
+	assert.Nil(t, result)
+	assert.NotNil(t, err)
+	assert.EqualValues(t, "Invalid user", err.Message)
+	assert.EqualValues(t, http.StatusBadRequest, err.Status)
+	assert.EqualValues(t, "bad_request", err.Err)
+}

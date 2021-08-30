@@ -95,6 +95,12 @@ func (user User) Update(newUser UserInterface, isPartial bool) (UserInterface, *
 		user.Email = toUpdateUser.Email
 	}
 
+	validatedUser, validateErr := user.Validate()
+	if validateErr != nil {
+		return nil, validateErr
+	}
+	user = validatedUser.(User)
+
 	_, err := users_db.Client.Prepare(queryUpdateUserName, queryUpdateUser)
 	if err != nil {
 		logger.Error("Error when trying to prepare update user statement", err)

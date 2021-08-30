@@ -53,7 +53,7 @@ func (u *usersServiceMock) GetUser(user users.UserInterface) (users.UserInterfac
 }
 
 func (u *usersServiceMock) UpdateUser(user users.UserInterface, isPartial bool) (users.UserInterface, *rest_errors.RestErr) {
-	// TODO
+	// TODO: Create UpdateUser function for usersServiceMock
 	return nil, nil
 }
 
