@@ -2,6 +2,7 @@ package users
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/ericbg27/top10movies-api/src/domain/users"
@@ -15,6 +16,15 @@ import (
 const (
 	layoutISO = "2006-01-02"
 )
+
+func getUserID(userIDParam string) (int64, *rest_errors.RestErr) {
+	userID, userErr := strconv.ParseInt(userIDParam, 10, 64)
+	if userErr != nil {
+		return 0, rest_errors.NewBadRequestError("User ID should be a number")
+	}
+
+	return userID, nil
+}
 
 func Login(c *gin.Context) {
 	var user users.User
@@ -81,4 +91,37 @@ func Create(c *gin.Context) {
 	newUser.Password = ""
 
 	c.JSON(http.StatusCreated, newUser)
+}
+
+func Update(c *gin.Context) {
+	userID, IdErr := getUserID(c.Param("user_id"))
+	if IdErr != nil {
+		c.JSON(IdErr.Status, IdErr)
+
+		return
+	}
+
+	var user users.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		restErr := rest_errors.NewBadRequestError("Invalid JSON body")
+		c.JSON(restErr.Status, restErr)
+
+		return
+	}
+
+	user.ID = userID
+
+	isPartial := c.Request.Method == http.MethodPatch
+
+	result, updateErr := users_service.UsersService.UpdateUser(user, isPartial)
+	if updateErr != nil {
+		c.JSON(updateErr.Status, updateErr)
+
+		return
+	}
+
+	updatedUser := result.(users.User)
+	updatedUser.Password = ""
+
+	c.JSON(http.StatusOK, updatedUser)
 }
