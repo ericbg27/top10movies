@@ -76,6 +76,11 @@ func (u *usersServiceMock) UpdateUser(user users.UserInterface, isPartial bool) 
 	return newUser, nil
 }
 
+func (u *usersServiceMock) DeleteUser(user users.UserInterface) *rest_errors.RestErr {
+	// TODO
+	return nil
+}
+
 func PrepareTest(request []byte, method string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	c, _ = gin.CreateTestContext(w)

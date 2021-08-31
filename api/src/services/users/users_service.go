@@ -11,6 +11,7 @@ type usersServiceInterface interface {
 	CreateUser(users.UserInterface) (users.UserInterface, *rest_errors.RestErr)
 	GetUser(users.UserInterface) (users.UserInterface, *rest_errors.RestErr)
 	UpdateUser(users.UserInterface, bool) (users.UserInterface, *rest_errors.RestErr)
+	DeleteUser(users.UserInterface) *rest_errors.RestErr
 }
 
 var (
@@ -57,4 +58,19 @@ func (s *usersService) UpdateUser(user users.UserInterface, isPartial bool) (use
 	}
 
 	return updatedUser, nil
+}
+
+func (s *usersService) DeleteUser(user users.UserInterface) *rest_errors.RestErr {
+	var currentUser users.UserInterface
+	var err *rest_errors.RestErr
+
+	if currentUser, err = user.GetById(); err != nil {
+		return err
+	}
+
+	if err = currentUser.Delete(); err != nil {
+		return err
+	}
+
+	return nil
 }

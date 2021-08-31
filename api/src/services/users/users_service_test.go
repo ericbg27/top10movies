@@ -97,6 +97,11 @@ func (u userMock) Update(newUser users.UserInterface, isPartial bool) (users.Use
 	return u, nil
 }
 
+func (u userMock) Delete() *rest_errors.RestErr {
+	// TODO
+	return nil
+}
+
 func TestMain(m *testing.M) {
 	UsersService = &usersService{}
 	os.Exit(m.Run())
