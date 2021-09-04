@@ -15,6 +15,7 @@ type userMock struct {
 	canGet    bool
 	canSave   bool
 	canUpdate bool
+	canDelete bool
 	FirstName string
 	LastName  string
 	Email     string
@@ -95,6 +96,14 @@ func (u userMock) Update(newUser users.UserInterface, isPartial bool) (users.Use
 	}
 
 	return u, nil
+}
+
+func (u userMock) Delete() *rest_errors.RestErr {
+	if u.canDelete == false {
+		return rest_errors.NewInternalServerError("Failed to delete user")
+	}
+
+	return nil
 }
 
 func TestMain(m *testing.M) {
@@ -253,4 +262,40 @@ func TestUpdateUserInvalidUser(t *testing.T) {
 	assert.EqualValues(t, "Invalid user", err.Message)
 	assert.EqualValues(t, http.StatusBadRequest, err.Status)
 	assert.EqualValues(t, "bad_request", err.Err)
+}
+
+func TestDeleteUserSuccess(t *testing.T) {
+	var user userMock
+	user.canGet = true
+	user.canDelete = true
+
+	err := UsersService.DeleteUser(user)
+
+	assert.Nil(t, err)
+}
+
+func TestDeleteUserGetError(t *testing.T) {
+	var user userMock
+	user.canGet = false
+	user.canDelete = true
+
+	err := UsersService.DeleteUser(user)
+
+	assert.NotNil(t, err)
+	assert.EqualValues(t, "Failed to get user by ID", err.Message)
+	assert.EqualValues(t, http.StatusInternalServerError, err.Status)
+	assert.EqualValues(t, "internal_server_error", err.Err)
+}
+
+func TestDeleteUserDeleteError(t *testing.T) {
+	var user userMock
+	user.canGet = true
+	user.canDelete = false
+
+	err := UsersService.DeleteUser(user)
+
+	assert.NotNil(t, err)
+	assert.EqualValues(t, "Failed to delete user", err.Message)
+	assert.EqualValues(t, http.StatusInternalServerError, err.Status)
+	assert.EqualValues(t, "internal_server_error", err.Err)
 }

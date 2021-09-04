@@ -76,6 +76,17 @@ func (u *usersServiceMock) UpdateUser(user users.UserInterface, isPartial bool) 
 	return newUser, nil
 }
 
+func (u *usersServiceMock) DeleteUser(user users.UserInterface) *rest_errors.RestErr {
+	usr := user.(users.User)
+
+	_, ok := mockDbID[usr.ID]
+	if !ok {
+		return rest_errors.NewInternalServerError("Error when trying to delete user")
+	}
+
+	return nil
+}
+
 func PrepareTest(request []byte, method string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	c, _ = gin.CreateTestContext(w)
@@ -451,4 +462,116 @@ func TestUpdateSaveError(t *testing.T) {
 	assert.EqualValues(t, "Error when trying to update user", receivedResponse.Message)
 	assert.EqualValues(t, "internal_server_error", receivedResponse.Err)
 	assert.EqualValues(t, http.StatusInternalServerError, receivedResponse.Status)
+}
+
+func TestDeleteSuccess(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		users.User{
+			ID:        1,
+			FirstName: "Johnn",
+			LastName:  "Doee",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "DELETE")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+
+	Delete(c)
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	receivedResponse := string(responseData[:])
+
+	assert.EqualValues(t, "", receivedResponse)
+}
+
+func TestDeleteInvalidUserID(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		users.User{
+			FirstName: "Johnn",
+			LastName:  "Doee",
+			Email:     "johndoe2@gmail.com",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "Delete")
+
+	Delete(c)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse rest_errors.RestErr
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.EqualValues(t, http.StatusBadRequest, w.Code)
+	assert.EqualValues(t, "User ID should be a number", receivedResponse.Message)
+	assert.EqualValues(t, "bad_request", receivedResponse.Err)
+	assert.EqualValues(t, http.StatusBadRequest, receivedResponse.Status)
+}
+
+func TestDeleteInvalidJSONBody(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(`{"invalid_key": "true"}`)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "DELETE")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+
+	Delete(c)
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse rest_errors.RestErr
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.EqualValues(t, http.StatusBadRequest, w.Code)
+	assert.EqualValues(t, receivedResponse.Message, "Invalid JSON body")
+	assert.EqualValues(t, receivedResponse.Status, http.StatusBadRequest)
+	assert.EqualValues(t, receivedResponse.Err, "bad_request")
+}
+
+func TestDeleteDeleteError(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		users.User{
+			FirstName: "Johnn",
+			LastName:  "Doee",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "DELETE")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "2"})
+
+	Delete(c)
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse rest_errors.RestErr
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.EqualValues(t, http.StatusInternalServerError, w.Code)
+	assert.EqualValues(t, receivedResponse.Message, "Error when trying to delete user")
+	assert.EqualValues(t, receivedResponse.Status, http.StatusInternalServerError)
+	assert.EqualValues(t, receivedResponse.Err, "internal_server_error")
 }

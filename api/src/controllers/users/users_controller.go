@@ -52,7 +52,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Here we create a token and send to the user
+	// TODO: Create a token and send to the user
 	c.JSON(http.StatusOK, nil)
 }
 
@@ -124,4 +124,32 @@ func Update(c *gin.Context) {
 	updatedUser.Password = ""
 
 	c.JSON(http.StatusOK, updatedUser)
+}
+
+func Delete(c *gin.Context) {
+	userID, IdErr := getUserID(c.Param("user_id"))
+	if IdErr != nil {
+		c.JSON(IdErr.Status, IdErr)
+
+		return
+	}
+
+	var user users.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		restErr := rest_errors.NewBadRequestError("Invalid JSON body")
+		c.JSON(restErr.Status, restErr)
+
+		return
+	}
+
+	user.ID = userID
+
+	deleteErr := users_service.UsersService.DeleteUser(user)
+	if deleteErr != nil {
+		c.JSON(deleteErr.Status, deleteErr)
+
+		return
+	}
+
+	c.Status(http.StatusOK)
 }

@@ -17,6 +17,7 @@ type UserInterface interface {
 	GetById() (UserInterface, *rest_errors.RestErr)
 	Save() *rest_errors.RestErr
 	Update(newUser UserInterface, isPartial bool) (UserInterface, *rest_errors.RestErr)
+	Delete() *rest_errors.RestErr
 }
 
 type User struct {
