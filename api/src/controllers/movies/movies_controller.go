@@ -2,25 +2,22 @@ package movies
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 
 	movies_service "github.com/ericbg27/top10movies-api/src/services/movies"
-	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 	"github.com/gin-gonic/gin"
 )
 
 func Search(c *gin.Context) {
-	query := c.Query("query")
-	page := c.Query("page")
-	_, err := strconv.ParseInt(page, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, rest_errors.NewInternalServerError("Page query parameter should be an integer"))
+	queryParams := make(map[string]string)
+
+	for queryKey, queryVal := range c.Request.URL.Query() {
+		queryParams[queryKey] = queryVal[0]
 	}
 
-	query = strings.ReplaceAll(query, "+", " ")
+	queryParams[movies_service.QueryParam] = strings.ReplaceAll(queryParams[movies_service.QueryParam], "+", " ")
 
-	result, searchErr := movies_service.UsersService.SearchMovies(query, page)
+	result, searchErr := movies_service.UsersService.SearchMovies(queryParams)
 	if searchErr != nil {
 		c.JSON(searchErr.Status, searchErr)
 	}

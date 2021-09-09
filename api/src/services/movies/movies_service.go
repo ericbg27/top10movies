@@ -9,13 +9,17 @@ import (
 type moviesService struct{}
 
 type moviesServiceInterface interface {
-	SearchMovies(name, page string) (*tmdb.MovieSearchResults, *rest_errors.RestErr)
+	SearchMovies(searchOptions map[string]string) (*tmdb.MovieSearchResults, *rest_errors.RestErr)
 }
 
 var (
 	UsersService moviesServiceInterface = &moviesService{}
 
 	tmdbAPI *tmdb.TMDb
+)
+
+const (
+	QueryParam = "query"
 )
 
 func init() {
@@ -31,11 +35,11 @@ func init() {
 }
 
 // TODO: Add more options other than page
-func (m *moviesService) SearchMovies(name, page string) (*tmdb.MovieSearchResults, *rest_errors.RestErr) {
-	searchOptions := map[string]string{
-		"page": page,
-	}
-	result, err := tmdbAPI.SearchMovie(name, searchOptions)
+func (m *moviesService) SearchMovies(searchOptions map[string]string) (*tmdb.MovieSearchResults, *rest_errors.RestErr) {
+	movieName := searchOptions[QueryParam]
+	delete(searchOptions, QueryParam)
+
+	result, err := tmdbAPI.SearchMovie(movieName, searchOptions)
 	if err != nil {
 		return nil, rest_errors.NewInternalServerError("Failed to search for movie")
 	}
