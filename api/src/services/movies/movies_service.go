@@ -34,7 +34,6 @@ func init() {
 	tmdbAPI = tmdb.Init(tmdbConfig)
 }
 
-// TODO: Add more options other than page
 func (m *moviesService) SearchMovies(searchOptions map[string]string) (*tmdb.MovieSearchResults, *rest_errors.RestErr) {
 	movieName := searchOptions[QueryParam]
 	delete(searchOptions, QueryParam)

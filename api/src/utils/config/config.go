@@ -23,6 +23,7 @@ type DatabaseCfg struct {
 	Password string `mapstructure:"password"`
 	DbName   string `mapstructure:"dbname"`
 	LogLevel string `mapstructure:"log_level"`
+	CacheTtl int64  `mapstructure:"cache_ttl"`
 }
 
 type MovieApiCfg struct {

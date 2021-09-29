@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/ericbg27/top10movies-api/src/datasources/postgresql/users_db"
+	"github.com/ericbg27/top10movies-api/src/datasources/postgresql/db"
 	"github.com/ericbg27/top10movies-api/src/utils/config"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
 )
@@ -18,7 +18,8 @@ var (
 func StartApplication() {
 	mapUrls()
 
-	users_db.SetupDbConnection()
+	db.SetupDbConnection()
+	go db.ClearMoviesCache()
 
 	cfg := config.GetConfig()
 
