@@ -23,12 +23,18 @@ type DatabaseCfg struct {
 	Password string `mapstructure:"password"`
 	DbName   string `mapstructure:"dbname"`
 	LogLevel string `mapstructure:"log_level"`
+	CacheTtl int64  `mapstructure:"cache_ttl"`
+}
+
+type MovieApiCfg struct {
+	ApiKey string `mapstructure:"api_key"`
 }
 
 type Config struct {
 	Server   ServerCfg   `mapstructure:"server"`
 	Logger   LoggerCfg   `mapstructure:"logger"`
 	Database DatabaseCfg `mapstructure:"database"`
+	MovieApi MovieApiCfg `mapstructure:"movieapi"`
 }
 
 var (

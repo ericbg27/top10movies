@@ -1,12 +1,17 @@
-package users_db
+package db
 
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ericbg27/top10movies-api/src/utils/config"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
 	"github.com/jackc/pgx"
+)
+
+const (
+	deleteCacheQuery = "DELETE FROM movies;"
 )
 
 var (
@@ -18,11 +23,8 @@ var (
 	password = config.GetConfig().Database.Password
 	dbname   = config.GetConfig().Database.DbName
 	loglevel = config.GetConfig().Database.LogLevel
+	cachettl = config.GetConfig().Database.CacheTtl
 )
-
-/*func init() {
-	setupDbConnection()
-}*/
 
 func SetupDbConnection() {
 	var connconfig pgx.ConnPoolConfig
@@ -44,5 +46,18 @@ func SetupDbConnection() {
 	if err != nil {
 		logger.Error(fmt.Sprintf("Unable to connect to database: %v\n", err.Error()), err)
 		panic(err)
+	}
+}
+
+func ClearMoviesCache() {
+	clearCacheTicker := time.NewTicker(time.Duration(cachettl) * time.Second)
+
+	for {
+		<-clearCacheTicker.C
+
+		logger.Info("Clearing movies cache")
+
+		// TODO: Improve cache clearing by saving the timestamp when records are saved and verifying if the elapsed time is bigger than cachettl or not
+		Client.Exec(deleteCacheQuery)
 	}
 }
