@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ericbg27/top10movies-api/src/domain/user_favorites"
 	"github.com/ericbg27/top10movies-api/src/domain/users"
 	users_service "github.com/ericbg27/top10movies-api/src/services/users"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
@@ -152,4 +153,24 @@ func Delete(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+func GetUserFavorites(c *gin.Context) {
+	userID, IdErr := getUserID(c.Param("user_id"))
+	if IdErr != nil {
+		c.JSON(IdErr.Status, IdErr)
+
+		return
+	}
+
+	var userFavorites user_favorites.UserFavorites
+
+	getErr := userFavorites.GetFavorites(userID)
+	if getErr != nil {
+		c.JSON(getErr.Status, getErr)
+
+		return
+	}
+
+	c.JSON(http.StatusOK, userFavorites)
 }
