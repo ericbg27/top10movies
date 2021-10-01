@@ -1,6 +1,7 @@
 package users_service
 
 import (
+	"github.com/ericbg27/top10movies-api/src/domain/user_favorites"
 	"github.com/ericbg27/top10movies-api/src/domain/users"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 )
@@ -12,6 +13,8 @@ type usersServiceInterface interface {
 	GetUser(users.UserInterface) (users.UserInterface, *rest_errors.RestErr)
 	UpdateUser(users.UserInterface, bool) (users.UserInterface, *rest_errors.RestErr)
 	DeleteUser(users.UserInterface) *rest_errors.RestErr
+	GetUserFavorites(user_favorites.UserFavoritesInterface) (user_favorites.UserFavoritesInterface, *rest_errors.RestErr)
+	AddUserFavorite(user_favorites.UserFavoritesInterface) *rest_errors.RestErr
 }
 
 var (
@@ -69,6 +72,25 @@ func (s *usersService) DeleteUser(user users.UserInterface) *rest_errors.RestErr
 	}
 
 	if err = currentUser.Delete(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *usersService) GetUserFavorites(userFavorites user_favorites.UserFavoritesInterface) (user_favorites.UserFavoritesInterface, *rest_errors.RestErr) {
+	var currentUserFavorites user_favorites.UserFavoritesInterface
+	var err *rest_errors.RestErr
+
+	if currentUserFavorites, err = userFavorites.GetFavorites(); err != nil {
+		return nil, err
+	}
+
+	return currentUserFavorites, nil
+}
+
+func (s *usersService) AddUserFavorite(userFavorites user_favorites.UserFavoritesInterface) *rest_errors.RestErr {
+	if err := userFavorites.AddFavorite(); err != nil {
 		return err
 	}
 

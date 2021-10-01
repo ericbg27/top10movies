@@ -18,7 +18,7 @@ const (
 	layoutISO = "2006-01-02"
 )
 
-func getUserID(userIDParam string) (int64, *rest_errors.RestErr) {
+func getID(userIDParam string) (int64, *rest_errors.RestErr) {
 	userID, userErr := strconv.ParseInt(userIDParam, 10, 64)
 	if userErr != nil {
 		return 0, rest_errors.NewBadRequestError("User ID should be a number")
@@ -95,7 +95,7 @@ func Create(c *gin.Context) {
 }
 
 func Update(c *gin.Context) {
-	userID, IdErr := getUserID(c.Param("user_id"))
+	userID, IdErr := getID(c.Param("user_id"))
 	if IdErr != nil {
 		c.JSON(IdErr.Status, IdErr)
 
@@ -128,7 +128,7 @@ func Update(c *gin.Context) {
 }
 
 func Delete(c *gin.Context) {
-	userID, IdErr := getUserID(c.Param("user_id"))
+	userID, IdErr := getID(c.Param("user_id"))
 	if IdErr != nil {
 		c.JSON(IdErr.Status, IdErr)
 
@@ -156,16 +156,17 @@ func Delete(c *gin.Context) {
 }
 
 func GetUserFavorites(c *gin.Context) {
-	userID, IdErr := getUserID(c.Param("user_id"))
+	userID, IdErr := getID(c.Param("user_id"))
 	if IdErr != nil {
 		c.JSON(IdErr.Status, IdErr)
 
 		return
 	}
 
-	var userFavorites user_favorites.UserFavorites
+	var usrFav user_favorites.UserFavorites
+	usrFav.UserID = userID
 
-	getErr := userFavorites.GetFavorites(userID)
+	userFavorites, getErr := users_service.UsersService.GetUserFavorites(usrFav)
 	if getErr != nil {
 		c.JSON(getErr.Status, getErr)
 
@@ -173,4 +174,33 @@ func GetUserFavorites(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, userFavorites)
+}
+
+func AddUserFavorite(c *gin.Context) {
+	userID, userIdErr := getID(c.Param("user_id"))
+	if userIdErr != nil {
+		c.JSON(userIdErr.Status, userIdErr)
+
+		return
+	}
+
+	movieID, movieIdErr := getID(c.Param("movie_id"))
+	if movieIdErr != nil {
+		c.JSON(movieIdErr.Status, movieIdErr)
+
+		return
+	}
+
+	var userFavorite user_favorites.UserFavorites
+	userFavorite.UserID = userID
+	userFavorite.MoviesIDs = append(userFavorite.MoviesIDs, movieID)
+
+	addErr := users_service.UsersService.AddUserFavorite(userFavorite)
+	if addErr != nil {
+		c.JSON(addErr.Status, addErr)
+
+		return
+	}
+
+	c.Status(http.StatusOK)
 }

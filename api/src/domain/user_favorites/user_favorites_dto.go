@@ -3,7 +3,8 @@ package user_favorites
 import "github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 
 type UserFavoritesInterface interface {
-	GetFavorites(int64) (UserFavoritesInterface, *rest_errors.RestErr)
+	GetFavorites() (UserFavoritesInterface, *rest_errors.RestErr)
+	AddFavorite() *rest_errors.RestErr
 }
 
 type UserFavorites struct {
