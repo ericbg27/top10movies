@@ -1,12 +1,15 @@
 package users
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/ericbg27/top10movies-api/src/domain/movies"
 	"github.com/ericbg27/top10movies-api/src/domain/user_favorites"
 	"github.com/ericbg27/top10movies-api/src/domain/users"
+	movies_service "github.com/ericbg27/top10movies-api/src/services/movies"
 	users_service "github.com/ericbg27/top10movies-api/src/services/users"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
@@ -176,6 +179,7 @@ func GetUserFavorites(c *gin.Context) {
 	c.JSON(http.StatusOK, userFavorites)
 }
 
+// TODO: Add the movie to cache if it isn't. Is it wrong to import the movies controller?
 func AddUserFavorite(c *gin.Context) {
 	userID, userIdErr := getID(c.Param("user_id"))
 	if userIdErr != nil {
@@ -184,16 +188,36 @@ func AddUserFavorite(c *gin.Context) {
 		return
 	}
 
-	movieID, movieIdErr := getID(c.Param("movie_id"))
-	if movieIdErr != nil {
-		c.JSON(movieIdErr.Status, movieIdErr)
+	var movie movies.Movie
+
+	if err := c.ShouldBindJSON(&movie); err != nil {
+		fmt.Println(err.Error())
+		restErr := rest_errors.NewBadRequestError("Invalid JSON body")
+		c.JSON(restErr.Status, restErr)
 
 		return
 	}
 
+	movieCacheResult, err := movies_service.MoviesService.GetMovie(movie)
+	if err != nil {
+		c.JSON(err.Status, err)
+
+		return
+	}
+
+	movieCache := movieCacheResult.(movies.Movie)
+	if movieCache.ID == -1 { // Movie is not cached
+		addErr := movies_service.MoviesService.AddMovie(movie)
+		if addErr != nil {
+			c.JSON(addErr.Status, addErr)
+
+			return
+		}
+	}
+
 	var userFavorite user_favorites.UserFavorites
 	userFavorite.UserID = userID
-	userFavorite.MoviesIDs = append(userFavorite.MoviesIDs, movieID)
+	userFavorite.MoviesIDs = append(userFavorite.MoviesIDs, movie.ID)
 
 	addErr := users_service.UsersService.AddUserFavorite(userFavorite)
 	if addErr != nil {

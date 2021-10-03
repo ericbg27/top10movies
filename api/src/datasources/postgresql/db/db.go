@@ -1,13 +1,15 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/ericbg27/top10movies-api/src/utils/config"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 const (
@@ -15,7 +17,7 @@ const (
 )
 
 var (
-	Client *pgx.ConnPool
+	Client *pgxpool.Conn
 
 	host     = config.GetConfig().Database.Host
 	port     = config.GetConfig().Database.Port
@@ -27,30 +29,35 @@ var (
 )
 
 func SetupDbConnection() {
-	var connconfig pgx.ConnPoolConfig
-	connconfig.Host = host
-	connconfig.Port = port
-	connconfig.Password = password
-	connconfig.Database = dbname
-	connconfig.User = user
+	config, err := pgxpool.ParseConfig(fmt.Sprintf("postgres://%s:%s@%s:%d/%s", user, password, host, port, dbname))
+	if err != nil {
+		logger.Error("Error when parsing database connection string", err)
+		panic(err)
+	}
 
-	connconfig.Logger = logger.GetLogger()
+	config.ConnConfig.Logger = logger.GetLogger()
 
 	level, err := pgx.LogLevelFromString(strings.ToLower(loglevel))
 	if err != nil {
 		level = pgx.LogLevelInfo
 	}
-	connconfig.LogLevel = level
+	config.ConnConfig.LogLevel = level
 
-	Client, err = pgx.NewConnPool(connconfig)
+	clientPool, err := pgxpool.ConnectConfig(context.Background(), config)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Unable to connect to database: %v\n", err.Error()), err)
+		panic(err)
+	}
+
+	Client, err = clientPool.Acquire(context.Background())
+	if err != nil {
+		logger.Error("Unable to acquire connection to database", err)
 		panic(err)
 	}
 }
 
 func ClearMoviesCache() {
-	clearCacheTicker := time.NewTicker(time.Duration(cachettl) * time.Second)
+	clearCacheTicker := time.NewTicker(time.Duration(cachettl) * time.Minute)
 
 	for {
 		<-clearCacheTicker.C
@@ -58,6 +65,6 @@ func ClearMoviesCache() {
 		logger.Info("Clearing movies cache")
 
 		// TODO: Improve cache clearing by saving the timestamp when records are saved and verifying if the elapsed time is bigger than cachettl or not
-		Client.Exec(deleteCacheQuery)
+		Client.Exec(context.Background(), deleteCacheQuery)
 	}
 }

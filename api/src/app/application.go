@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -19,6 +20,8 @@ func StartApplication() {
 	mapUrls()
 
 	db.SetupDbConnection()
+	defer db.Client.Conn().Close(context.Background())
+
 	go db.ClearMoviesCache()
 
 	cfg := config.GetConfig()
