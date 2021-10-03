@@ -28,11 +28,6 @@ const (
 
 func (user User) Get() (UserInterface, *rest_errors.RestErr) {
 	savedUser := user
-	/*_, err := db.Client.Prepare(queryGetUserName, queryGetUser)
-	if err != nil {
-		logger.Error("Error when trying to prepare get user statement", err)
-		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
-	}*/
 
 	result := db.Client.QueryRow(context.Background(), queryGetUser, user.Email)
 	err := result.Scan(&savedUser.ID, &savedUser.FirstName, &savedUser.Status, &savedUser.Password)
@@ -46,11 +41,6 @@ func (user User) Get() (UserInterface, *rest_errors.RestErr) {
 
 func (user User) GetById() (UserInterface, *rest_errors.RestErr) {
 	savedUser := user
-	/*_, err := db.Client.Prepare(queryGetUserByIdName, queryGetUserById)
-	if err != nil {
-		logger.Error("Error when trying to prepare get user by id statement", err)
-		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
-	}*/
 
 	result := db.Client.QueryRow(context.Background(), queryGetUserById, user.ID)
 	err := result.Scan(&savedUser.FirstName, &savedUser.LastName, &savedUser.Email, &savedUser.Status, &savedUser.Password)
@@ -63,12 +53,6 @@ func (user User) GetById() (UserInterface, *rest_errors.RestErr) {
 }
 
 func (user User) Save() *rest_errors.RestErr {
-	/*_, err := db.Client.Prepare(queryInsertUserName, queryInsertUser)
-	if err != nil {
-		logger.Error("Error when trying to prepare save user statement", err)
-		return rest_errors.NewInternalServerError("Error when trying to save user")
-	}*/
-
 	result, err := db.Client.Exec(context.Background(), queryInsertUser, user.FirstName, user.LastName, user.Email, user.DateCreated, user.Status, user.Password)
 	if err != nil {
 		logger.Error("Error when trying to save user in database", err)
@@ -105,12 +89,6 @@ func (user User) Update(newUser UserInterface, isPartial bool) (UserInterface, *
 	}
 	user = validatedUser.(User)
 
-	/*_, err := db.Client.Prepare(queryUpdateUserName, queryUpdateUser)
-	if err != nil {
-		logger.Error("Error when trying to prepare update user statement", err)
-		return nil, rest_errors.NewInternalServerError("Error when trying to update user")
-	}*/
-
 	result, err := db.Client.Exec(context.Background(), queryUpdateUser, user.FirstName, user.LastName, user.Email, user.ID)
 	if err != nil {
 		logger.Error("Error when trying to update user in database", err)
@@ -123,12 +101,6 @@ func (user User) Update(newUser UserInterface, isPartial bool) (UserInterface, *
 }
 
 func (user User) Delete() *rest_errors.RestErr {
-	/*_, err := db.Client.Prepare(queryDeleteUserName, queryDeleteUser)
-	if err != nil {
-		logger.Error("Error when trying to prepare delete user statement", err)
-		return rest_errors.NewInternalServerError("Error when trying to delete user")
-	}*/
-
 	result, err := db.Client.Exec(context.Background(), queryDeleteUser, user.ID)
 	if err != nil {
 		logger.Error("Error when trying to delete user in database", err)

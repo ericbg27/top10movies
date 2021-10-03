@@ -179,7 +179,6 @@ func GetUserFavorites(c *gin.Context) {
 	c.JSON(http.StatusOK, userFavorites)
 }
 
-// TODO: Add the movie to cache if it isn't. Is it wrong to import the movies controller?
 func AddUserFavorite(c *gin.Context) {
 	userID, userIdErr := getID(c.Param("user_id"))
 	if userIdErr != nil {
@@ -188,7 +187,7 @@ func AddUserFavorite(c *gin.Context) {
 		return
 	}
 
-	var movie movies.Movie
+	var movie movies.MovieInfo
 
 	if err := c.ShouldBindJSON(&movie); err != nil {
 		fmt.Println(err.Error())
@@ -205,8 +204,8 @@ func AddUserFavorite(c *gin.Context) {
 		return
 	}
 
-	movieCache := movieCacheResult.(movies.Movie)
-	if movieCache.ID == -1 { // Movie is not cached
+	movieCache := movieCacheResult.(movies.MovieInfo)
+	if movieCache.Movie.ID == -1 { // Movie is not cached
 		addErr := movies_service.MoviesService.AddMovie(movie)
 		if addErr != nil {
 			c.JSON(addErr.Status, addErr)
@@ -217,7 +216,7 @@ func AddUserFavorite(c *gin.Context) {
 
 	var userFavorite user_favorites.UserFavorites
 	userFavorite.UserID = userID
-	userFavorite.MoviesIDs = append(userFavorite.MoviesIDs, movie.ID)
+	userFavorite.MoviesIDs = append(userFavorite.MoviesIDs, movie.Movie.ID)
 
 	addErr := users_service.UsersService.AddUserFavorite(userFavorite)
 	if addErr != nil {

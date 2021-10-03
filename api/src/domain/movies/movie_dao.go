@@ -18,20 +18,15 @@ const (
 	createdAtLayout   = "2006-02-01T15:04:05Z"
 )
 
-func (m Movie) AddMovie() *rest_errors.RestErr {
-	/*_, err := db.Client.Prepare(queryAddMovieName, queryAddMovie)
-	if err != nil {
-		logger.Error("Error when trying to prepare add movie statement", err)
-		return rest_errors.NewInternalServerError("Error when trying to add movie")
-	}*/
-
+// TODO: Add more informtion to the movies table in database
+func (m MovieInfo) AddMovie() *rest_errors.RestErr {
 	var releaseDate time.Time
 	var createdAt time.Time
 
-	releaseDate, _ = time.Parse(releaseDateLayout, m.ReleaseDate)
+	releaseDate, _ = time.Parse(releaseDateLayout, m.Movie.ReleaseDate)
 	createdAt = time.Now()
 
-	_, err := db.Client.Exec(context.Background(), queryAddMovie, m.ID, m.OriginalTitle, m.Adult, releaseDate, createdAt, m.Title, m.Overview)
+	_, err := db.Client.Exec(context.Background(), queryAddMovie, m.Movie.ID, m.Movie.OriginalTitle, m.Movie.Adult, releaseDate, createdAt, m.Movie.Title, m.Movie.Overview)
 	if err != nil {
 		logger.Error("Error when trying to add movie", err)
 		return rest_errors.NewInternalServerError("Error when trying to add movie")
@@ -40,30 +35,24 @@ func (m Movie) AddMovie() *rest_errors.RestErr {
 	return nil
 }
 
-func (m Movie) GetMovie() (MovieInterface, *rest_errors.RestErr) {
-	/*_, err := db.Client.Prepare(queryGetMovieName, queryGetMovie)
-	if err != nil {
-		logger.Error("Error when trying to prepare get movie statement", err)
-		return nil, rest_errors.NewInternalServerError("Error when trying to get movie")
-	}*/
+func (m MovieInfo) GetMovie() (MovieInterface, *rest_errors.RestErr) {
+	var savedMovie MovieInfo
 
-	var savedMovie Movie
-
-	result := db.Client.QueryRow(context.Background(), queryGetMovie, m.ID)
+	result := db.Client.QueryRow(context.Background(), queryGetMovie, m.Movie.ID)
 
 	var releaseDate time.Time
 	var createdAt time.Time
 
-	err := result.Scan(&savedMovie.ID, &savedMovie.OriginalTitle, &savedMovie.Adult, &releaseDate, &createdAt, &savedMovie.Title, &savedMovie.Overview)
+	err := result.Scan(&savedMovie.Movie.ID, &savedMovie.Movie.OriginalTitle, &savedMovie.Movie.Adult, &releaseDate, &createdAt, &savedMovie.Movie.Title, &savedMovie.Movie.Overview)
 
-	savedMovie.ReleaseDate = releaseDate.Format(releaseDateLayout)
+	savedMovie.Movie.ReleaseDate = releaseDate.Format(releaseDateLayout)
 	savedMovie.CreatedAt = createdAt.Format(createdAtLayout)
 
 	if err != nil && err != pgx.ErrNoRows {
 		logger.Error("Error when trying to get movie", err)
 		return nil, rest_errors.NewInternalServerError("Error when trying to get movie")
 	} else if err == pgx.ErrNoRows {
-		savedMovie.ID = -1
+		savedMovie.Movie.ID = -1
 	}
 
 	return savedMovie, nil

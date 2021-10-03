@@ -8,6 +8,6 @@ type UserFavoritesInterface interface {
 }
 
 type UserFavorites struct {
-	UserID    int64   `json:"user_id"`
-	MoviesIDs []int64 `json:"favorite_movies"`
+	UserID    int64 `json:"user_id"`
+	MoviesIDs []int `json:"favorite_movies"`
 }
