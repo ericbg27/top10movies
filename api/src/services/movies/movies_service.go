@@ -12,7 +12,8 @@ type moviesService struct{}
 type moviesServiceInterface interface {
 	SearchMovies(searchOptions map[string]string) (*tmdb.MovieSearchResults, *rest_errors.RestErr)
 	AddMovie(movies.MovieInterface) *rest_errors.RestErr
-	GetMovie(movies.MovieInterface) (movies.MovieInterface, *rest_errors.RestErr)
+	GetMovieFromCache(movies.MovieInterface) (movies.MovieInterface, *rest_errors.RestErr)
+	GetMovieById(int) (*tmdb.Movie, *rest_errors.RestErr)
 }
 
 var (
@@ -57,11 +58,20 @@ func (m *moviesService) AddMovie(movie movies.MovieInterface) *rest_errors.RestE
 	return nil
 }
 
-func (m *moviesService) GetMovie(movie movies.MovieInterface) (movies.MovieInterface, *rest_errors.RestErr) {
+func (m *moviesService) GetMovieFromCache(movie movies.MovieInterface) (movies.MovieInterface, *rest_errors.RestErr) {
 	savedMovie, err := movie.GetMovie()
 	if err != nil {
 		return nil, err
 	}
 
 	return savedMovie, nil
+}
+
+func (m *moviesService) GetMovieById(movieId int) (*tmdb.Movie, *rest_errors.RestErr) {
+	result, err := tmdbAPI.GetMovieInfo(movieId, nil)
+	if err != nil {
+		return nil, rest_errors.NewInternalServerError("Failed to get movie information")
+	}
+
+	return result, nil
 }

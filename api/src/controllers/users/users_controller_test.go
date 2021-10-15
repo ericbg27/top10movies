@@ -135,7 +135,7 @@ func (m *moviesServiceMock) AddMovie(movie movies.MovieInterface) *rest_errors.R
 	return nil
 }
 
-func (m *moviesServiceMock) GetMovie(movie movies.MovieInterface) (movies.MovieInterface, *rest_errors.RestErr) {
+func (m *moviesServiceMock) GetMovieFromCache(movie movies.MovieInterface) (movies.MovieInterface, *rest_errors.RestErr) {
 	mov := movie.(movies.MovieInfo)
 
 	if !m.canGetMovie {
@@ -157,6 +157,11 @@ func (m *moviesServiceMock) GetMovie(movie movies.MovieInterface) (movies.MovieI
 	}
 
 	return mov, nil
+}
+
+func (*moviesServiceMock) GetMovieById(movieId int) (*tmdb.Movie, *rest_errors.RestErr) {
+	// TODO
+	return nil, nil
 }
 
 func PrepareTest(request []byte, method string) *httptest.ResponseRecorder {

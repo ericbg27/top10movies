@@ -175,7 +175,42 @@ func GetUserFavorites(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, userFavorites)
+	for _, movieId := range userFavorites.(user_favorites.UserFavorites).MoviesIDs {
+		var movie movies.MovieInfo
+		movie.Movie.ID = movieId
+
+		movieCacheResult, err := movies_service.MoviesService.GetMovieFromCache(movie)
+		if err != nil {
+			c.JSON(err.Status, err)
+
+			return
+		}
+
+		movieCache := movieCacheResult.(movies.MovieInfo)
+		if movieCache.Movie.ID == -1 { // Movie is not cached
+			movieResult, err := movies_service.MoviesService.GetMovieById(movie.Movie.ID)
+			if err != nil { // TODO: Do we return an error if one of the favorites is not found?
+				c.JSON(err.Status, err)
+
+				return
+			}
+
+			movie.Movie = *movieResult
+			addErr := movies_service.MoviesService.AddMovie(movie)
+			if addErr != nil { // TODO: Do we return an error if we fail to save in cache? Maybe just log!
+				c.JSON(addErr.Status, addErr)
+
+				return
+			}
+
+			usrFav.MoviesData = append(usrFav.MoviesData, *movieResult)
+		} else {
+			usrFav.MoviesData = append(usrFav.MoviesData, movieCache.Movie)
+		}
+
+	}
+
+	c.JSON(http.StatusOK, usrFav)
 }
 
 func AddUserFavorite(c *gin.Context) {
@@ -195,7 +230,7 @@ func AddUserFavorite(c *gin.Context) {
 		return
 	}
 
-	movieCacheResult, err := movies_service.MoviesService.GetMovie(movie)
+	movieCacheResult, err := movies_service.MoviesService.GetMovieFromCache(movie)
 	if err != nil {
 		c.JSON(err.Status, err)
 
@@ -205,7 +240,7 @@ func AddUserFavorite(c *gin.Context) {
 	movieCache := movieCacheResult.(movies.MovieInfo)
 	if movieCache.Movie.ID == -1 { // Movie is not cached
 		addErr := movies_service.MoviesService.AddMovie(movie)
-		if addErr != nil {
+		if addErr != nil { // TODO: Do we return an error if we fail to save in cache? Maybe just log!
 			c.JSON(addErr.Status, addErr)
 
 			return
