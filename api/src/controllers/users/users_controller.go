@@ -1,7 +1,6 @@
 package users
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -190,7 +189,6 @@ func AddUserFavorite(c *gin.Context) {
 	var movie movies.MovieInfo
 
 	if err := c.ShouldBindJSON(&movie); err != nil {
-		fmt.Println(err.Error())
 		restErr := rest_errors.NewBadRequestError("Invalid JSON body")
 		c.JSON(restErr.Status, restErr)
 

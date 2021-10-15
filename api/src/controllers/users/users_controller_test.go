@@ -10,10 +10,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ericbg27/top10movies-api/src/domain/movies"
+	"github.com/ericbg27/top10movies-api/src/domain/user_favorites"
 	"github.com/ericbg27/top10movies-api/src/domain/users"
+	movies_service "github.com/ericbg27/top10movies-api/src/services/movies"
 	users_service "github.com/ericbg27/top10movies-api/src/services/users"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 	"github.com/gin-gonic/gin"
+	"github.com/ryanbradynd05/go-tmdb"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -25,7 +29,10 @@ var (
 	now      string
 )
 
-type usersServiceMock struct{}
+type usersServiceMock struct {
+	canGetFavorites bool
+	canAddFavorite  bool
+}
 
 func (u *usersServiceMock) CreateUser(user users.UserInterface) (users.UserInterface, *rest_errors.RestErr) {
 	usr := user.(users.User)
@@ -87,6 +94,71 @@ func (u *usersServiceMock) DeleteUser(user users.UserInterface) *rest_errors.Res
 	return nil
 }
 
+func (u *usersServiceMock) GetUserFavorites(userFavs user_favorites.UserFavoritesInterface) (user_favorites.UserFavoritesInterface, *rest_errors.RestErr) {
+	userFavorites := userFavs.(user_favorites.UserFavorites)
+
+	if !u.canGetFavorites {
+		return nil, rest_errors.NewInternalServerError("Error when trying to get user favorites")
+	}
+
+	userFavorites.MoviesIDs = append(userFavorites.MoviesIDs, 1)
+
+	return userFavorites, nil
+}
+
+func (u *usersServiceMock) AddUserFavorite(userFavs user_favorites.UserFavoritesInterface) *rest_errors.RestErr {
+	if !u.canAddFavorite {
+		return rest_errors.NewInternalServerError("Error when trying to add user favorite")
+	}
+
+	return nil
+}
+
+type moviesServiceMock struct {
+	canAddMovie    bool
+	canGetMovie    bool
+	hasMovieCached bool
+	addedMovie     bool
+}
+
+func (m *moviesServiceMock) SearchMovies(searchOptions map[string]string) (*tmdb.MovieSearchResults, *rest_errors.RestErr) {
+	return nil, nil
+}
+
+func (m *moviesServiceMock) AddMovie(movie movies.MovieInterface) *rest_errors.RestErr {
+	if !m.canAddMovie {
+		return rest_errors.NewInternalServerError("Error when trying to add movie")
+	}
+
+	m.addedMovie = true
+
+	return nil
+}
+
+func (m *moviesServiceMock) GetMovie(movie movies.MovieInterface) (movies.MovieInterface, *rest_errors.RestErr) {
+	mov := movie.(movies.MovieInfo)
+
+	if !m.canGetMovie {
+		return nil, rest_errors.NewInternalServerError("Error when trying to get movie")
+	}
+
+	if m.hasMovieCached {
+		mov.Movie = tmdb.Movie{
+			Title: "Example Movie Title",
+			ID:    1,
+		}
+		mov.CreatedAt = "01-02-2006"
+	} else {
+		mov.Movie = tmdb.Movie{
+			Title: "",
+			ID:    -1,
+		}
+		mov.CreatedAt = ""
+	}
+
+	return mov, nil
+}
+
 func PrepareTest(request []byte, method string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	c, _ = gin.CreateTestContext(w)
@@ -127,7 +199,17 @@ func TestMain(m *testing.M) {
 
 	now = time.Now().Format(layoutISO)
 
-	users_service.UsersService = &usersServiceMock{}
+	users_service.UsersService = &usersServiceMock{
+		canGetFavorites: true,
+		canAddFavorite:  true,
+	}
+
+	movies_service.MoviesService = &moviesServiceMock{
+		canAddMovie:    true,
+		canGetMovie:    true,
+		hasMovieCached: true,
+		addedMovie:     false,
+	}
 
 	os.Exit(m.Run())
 }
@@ -571,7 +653,339 @@ func TestDeleteDeleteError(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.EqualValues(t, http.StatusInternalServerError, w.Code)
-	assert.EqualValues(t, receivedResponse.Message, "Error when trying to delete user")
-	assert.EqualValues(t, receivedResponse.Status, http.StatusInternalServerError)
-	assert.EqualValues(t, receivedResponse.Err, "internal_server_error")
+	assert.EqualValues(t, "Error when trying to delete user", receivedResponse.Message)
+	assert.EqualValues(t, http.StatusInternalServerError, receivedResponse.Status)
+	assert.EqualValues(t, "internal_server_error", receivedResponse.Err)
+}
+
+func TestGetUserFavoritesSuccess(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		user_favorites.UserFavorites{
+			UserID:    1,
+			MoviesIDs: []int{},
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "GET")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+
+	GetUserFavorites(c)
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse user_favorites.UserFavorites
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, receivedResponse)
+	assert.EqualValues(t, http.StatusOK, w.Code)
+	assert.EqualValues(t, 1, len(receivedResponse.MoviesIDs))
+	assert.EqualValues(t, 1, receivedResponse.MoviesIDs[0])
+}
+
+func TestGetUserFavoritesInvalidUserID(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		user_favorites.UserFavorites{
+			UserID:    1,
+			MoviesIDs: []int{},
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "GET")
+
+	GetUserFavorites(c)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse rest_errors.RestErr
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.EqualValues(t, http.StatusBadRequest, w.Code)
+	assert.EqualValues(t, "User ID should be a number", receivedResponse.Message)
+	assert.EqualValues(t, "bad_request", receivedResponse.Err)
+	assert.EqualValues(t, http.StatusBadRequest, receivedResponse.Status)
+}
+
+func TestGetUserFavoritesFailure(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		user_favorites.UserFavorites{
+			UserID:    1,
+			MoviesIDs: []int{},
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "GET")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+
+	users_service.UsersService.(*usersServiceMock).canGetFavorites = false
+
+	GetUserFavorites(c)
+
+	users_service.UsersService.(*usersServiceMock).canGetFavorites = true
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse *rest_errors.RestErr
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, receivedResponse)
+	assert.EqualValues(t, http.StatusInternalServerError, w.Code)
+	assert.EqualValues(t, "Error when trying to get user favorites", receivedResponse.Message)
+	assert.EqualValues(t, http.StatusInternalServerError, receivedResponse.Status)
+	assert.EqualValues(t, "internal_server_error", receivedResponse.Err)
+}
+
+func TestAddUserFavoritesSuccessMovieCached(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		movies.MovieInfo{
+			Movie: tmdb.Movie{
+				ID:    1,
+				Title: "Example Movie Title",
+			},
+			CreatedAt: "",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "POST")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+
+	AddUserFavorite(c)
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	receivedResponse := string(responseData[:])
+
+	assert.EqualValues(t, "", receivedResponse)
+	assert.EqualValues(t, http.StatusOK, w.Code)
+	assert.EqualValues(t, false, movies_service.MoviesService.(*moviesServiceMock).addedMovie)
+}
+
+func TestAddUserFavoritesSuccessMovieNotCached(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		movies.MovieInfo{
+			Movie: tmdb.Movie{
+				ID:    1,
+				Title: "Example Movie Title",
+			},
+			CreatedAt: "",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "POST")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+
+	movies_service.MoviesService.(*moviesServiceMock).hasMovieCached = false
+
+	AddUserFavorite(c)
+
+	movies_service.MoviesService.(*moviesServiceMock).hasMovieCached = true
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	receivedResponse := string(responseData[:])
+
+	assert.EqualValues(t, "", receivedResponse)
+	assert.EqualValues(t, http.StatusOK, w.Code)
+	assert.EqualValues(t, true, movies_service.MoviesService.(*moviesServiceMock).addedMovie)
+}
+
+func TestAddUserFavoritesInvalidUserID(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		movies.MovieInfo{
+			Movie: tmdb.Movie{
+				ID:    1,
+				Title: "Example Movie Title",
+			},
+			CreatedAt: "",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "POST")
+
+	AddUserFavorite(c)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse rest_errors.RestErr
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.EqualValues(t, http.StatusBadRequest, w.Code)
+	assert.EqualValues(t, "User ID should be a number", receivedResponse.Message)
+	assert.EqualValues(t, "bad_request", receivedResponse.Err)
+	assert.EqualValues(t, http.StatusBadRequest, receivedResponse.Status)
+}
+
+func TestAddUserFavoritesInvalidJSONBody(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(`{"invalid_key": "true"}`)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "POST")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+
+	AddUserFavorite(c)
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse rest_errors.RestErr
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.EqualValues(t, http.StatusBadRequest, w.Code)
+	assert.EqualValues(t, "Invalid JSON body", receivedResponse.Message)
+	assert.EqualValues(t, "bad_request", receivedResponse.Err)
+	assert.EqualValues(t, http.StatusBadRequest, receivedResponse.Status)
+}
+
+func TestAddUserFavoritesGetMovieError(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		movies.MovieInfo{
+			Movie: tmdb.Movie{
+				ID:    1,
+				Title: "Example Movie Title",
+			},
+			CreatedAt: "",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "POST")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+
+	movies_service.MoviesService.(*moviesServiceMock).canGetMovie = false
+
+	AddUserFavorite(c)
+
+	movies_service.MoviesService.(*moviesServiceMock).canGetMovie = true
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse rest_errors.RestErr
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.EqualValues(t, http.StatusInternalServerError, w.Code)
+	assert.EqualValues(t, "Error when trying to get movie", receivedResponse.Message)
+	assert.EqualValues(t, "internal_server_error", receivedResponse.Err)
+	assert.EqualValues(t, http.StatusInternalServerError, receivedResponse.Status)
+}
+
+func TestAddUserFavoritesAddMovieErrorWhenNotCached(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		movies.MovieInfo{
+			Movie: tmdb.Movie{
+				ID:    1,
+				Title: "Example Movie Title",
+			},
+			CreatedAt: "",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "POST")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+
+	movies_service.MoviesService.(*moviesServiceMock).hasMovieCached = false
+	movies_service.MoviesService.(*moviesServiceMock).canAddMovie = false
+
+	AddUserFavorite(c)
+
+	movies_service.MoviesService.(*moviesServiceMock).hasMovieCached = true
+	movies_service.MoviesService.(*moviesServiceMock).canAddMovie = true
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse rest_errors.RestErr
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.EqualValues(t, http.StatusInternalServerError, w.Code)
+	assert.EqualValues(t, "Error when trying to add movie", receivedResponse.Message)
+	assert.EqualValues(t, "internal_server_error", receivedResponse.Err)
+	assert.EqualValues(t, http.StatusInternalServerError, receivedResponse.Status)
+}
+
+func TestAddUserFavoritesAddUserFavoriteError(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		movies.MovieInfo{
+			Movie: tmdb.Movie{
+				ID:    1,
+				Title: "Example Movie Title",
+			},
+			CreatedAt: "",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "POST")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+
+	users_service.UsersService.(*usersServiceMock).canAddFavorite = false
+
+	AddUserFavorite(c)
+
+	users_service.UsersService.(*usersServiceMock).canAddFavorite = false
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse rest_errors.RestErr
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.EqualValues(t, http.StatusInternalServerError, w.Code)
+	assert.EqualValues(t, "Error when trying to add user favorite", receivedResponse.Message)
+	assert.EqualValues(t, "internal_server_error", receivedResponse.Err)
+	assert.EqualValues(t, http.StatusInternalServerError, receivedResponse.Status)
 }
