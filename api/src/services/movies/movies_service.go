@@ -1,6 +1,7 @@
 package movies_service
 
 import (
+	"github.com/ericbg27/top10movies-api/src/domain/movies"
 	"github.com/ericbg27/top10movies-api/src/utils/config"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 	"github.com/ryanbradynd05/go-tmdb"
@@ -10,10 +11,12 @@ type moviesService struct{}
 
 type moviesServiceInterface interface {
 	SearchMovies(searchOptions map[string]string) (*tmdb.MovieSearchResults, *rest_errors.RestErr)
+	AddMovie(movies.MovieInterface) *rest_errors.RestErr
+	GetMovie(movies.MovieInterface) (movies.MovieInterface, *rest_errors.RestErr)
 }
 
 var (
-	UsersService moviesServiceInterface = &moviesService{}
+	MoviesService moviesServiceInterface = &moviesService{}
 
 	tmdbAPI *tmdb.TMDb
 )
@@ -44,4 +47,21 @@ func (m *moviesService) SearchMovies(searchOptions map[string]string) (*tmdb.Mov
 	}
 
 	return result, nil
+}
+
+func (m *moviesService) AddMovie(movie movies.MovieInterface) *rest_errors.RestErr {
+	if err := movie.AddMovie(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *moviesService) GetMovie(movie movies.MovieInterface) (movies.MovieInterface, *rest_errors.RestErr) {
+	savedMovie, err := movie.GetMovie()
+	if err != nil {
+		return nil, err
+	}
+
+	return savedMovie, nil
 }

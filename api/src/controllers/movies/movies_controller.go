@@ -17,7 +17,7 @@ func Search(c *gin.Context) {
 
 	queryParams[movies_service.QueryParam] = strings.ReplaceAll(queryParams[movies_service.QueryParam], "+", " ")
 
-	result, searchErr := movies_service.UsersService.SearchMovies(queryParams)
+	result, searchErr := movies_service.MoviesService.SearchMovies(queryParams)
 	if searchErr != nil {
 		c.JSON(searchErr.Status, searchErr)
 	}

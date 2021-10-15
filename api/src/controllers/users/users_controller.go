@@ -5,7 +5,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ericbg27/top10movies-api/src/domain/movies"
+	"github.com/ericbg27/top10movies-api/src/domain/user_favorites"
 	"github.com/ericbg27/top10movies-api/src/domain/users"
+	movies_service "github.com/ericbg27/top10movies-api/src/services/movies"
 	users_service "github.com/ericbg27/top10movies-api/src/services/users"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
@@ -17,7 +20,7 @@ const (
 	layoutISO = "2006-01-02"
 )
 
-func getUserID(userIDParam string) (int64, *rest_errors.RestErr) {
+func getID(userIDParam string) (int64, *rest_errors.RestErr) {
 	userID, userErr := strconv.ParseInt(userIDParam, 10, 64)
 	if userErr != nil {
 		return 0, rest_errors.NewBadRequestError("User ID should be a number")
@@ -94,7 +97,7 @@ func Create(c *gin.Context) {
 }
 
 func Update(c *gin.Context) {
-	userID, IdErr := getUserID(c.Param("user_id"))
+	userID, IdErr := getID(c.Param("user_id"))
 	if IdErr != nil {
 		c.JSON(IdErr.Status, IdErr)
 
@@ -127,7 +130,7 @@ func Update(c *gin.Context) {
 }
 
 func Delete(c *gin.Context) {
-	userID, IdErr := getUserID(c.Param("user_id"))
+	userID, IdErr := getID(c.Param("user_id"))
 	if IdErr != nil {
 		c.JSON(IdErr.Status, IdErr)
 
@@ -147,6 +150,75 @@ func Delete(c *gin.Context) {
 	deleteErr := users_service.UsersService.DeleteUser(user)
 	if deleteErr != nil {
 		c.JSON(deleteErr.Status, deleteErr)
+
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func GetUserFavorites(c *gin.Context) {
+	userID, IdErr := getID(c.Param("user_id"))
+	if IdErr != nil {
+		c.JSON(IdErr.Status, IdErr)
+
+		return
+	}
+
+	var usrFav user_favorites.UserFavorites
+	usrFav.UserID = userID
+
+	userFavorites, getErr := users_service.UsersService.GetUserFavorites(usrFav)
+	if getErr != nil {
+		c.JSON(getErr.Status, getErr)
+
+		return
+	}
+
+	c.JSON(http.StatusOK, userFavorites)
+}
+
+func AddUserFavorite(c *gin.Context) {
+	userID, userIdErr := getID(c.Param("user_id"))
+	if userIdErr != nil {
+		c.JSON(userIdErr.Status, userIdErr)
+
+		return
+	}
+
+	var movie movies.MovieInfo
+
+	if err := c.ShouldBindJSON(&movie); err != nil {
+		restErr := rest_errors.NewBadRequestError("Invalid JSON body")
+		c.JSON(restErr.Status, restErr)
+
+		return
+	}
+
+	movieCacheResult, err := movies_service.MoviesService.GetMovie(movie)
+	if err != nil {
+		c.JSON(err.Status, err)
+
+		return
+	}
+
+	movieCache := movieCacheResult.(movies.MovieInfo)
+	if movieCache.Movie.ID == -1 { // Movie is not cached
+		addErr := movies_service.MoviesService.AddMovie(movie)
+		if addErr != nil {
+			c.JSON(addErr.Status, addErr)
+
+			return
+		}
+	}
+
+	var userFavorite user_favorites.UserFavorites
+	userFavorite.UserID = userID
+	userFavorite.MoviesIDs = append(userFavorite.MoviesIDs, movie.Movie.ID)
+
+	addErr := users_service.UsersService.AddUserFavorite(userFavorite)
+	if addErr != nil {
+		c.JSON(addErr.Status, addErr)
 
 		return
 	}

@@ -12,5 +12,8 @@ func mapUrls() {
 	router.PATCH("/users/:user_id", users.Update)
 	router.DELETE("/users/:user_id", users.Delete)
 
+	router.GET("/users/:user_id/favorites", users.GetUserFavorites)
+	router.POST("/users/:user_id/add-favorite/", users.AddUserFavorite)
+
 	router.GET("/search", movies.Search)
 }
