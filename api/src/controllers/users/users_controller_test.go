@@ -32,6 +32,7 @@ var (
 type usersServiceMock struct {
 	canGetFavorites bool
 	canAddFavorite  bool
+	favoriteCached  bool
 }
 
 func (u *usersServiceMock) CreateUser(user users.UserInterface) (users.UserInterface, *rest_errors.RestErr) {
@@ -94,16 +95,24 @@ func (u *usersServiceMock) DeleteUser(user users.UserInterface) *rest_errors.Res
 	return nil
 }
 
-func (u *usersServiceMock) GetUserFavorites(userFavs user_favorites.UserFavoritesInterface) (user_favorites.UserFavoritesInterface, *rest_errors.RestErr) {
+func (u *usersServiceMock) GetUserFavorites(userFavs user_favorites.UserFavoritesInterface) (user_favorites.UserFavoritesInterface, map[int]bool, *rest_errors.RestErr) {
 	userFavorites := userFavs.(user_favorites.UserFavorites)
 
 	if !u.canGetFavorites {
-		return nil, rest_errors.NewInternalServerError("Error when trying to get user favorites")
+		return nil, nil, rest_errors.NewInternalServerError("Error when trying to get user favorites")
 	}
 
 	userFavorites.MoviesIDs = append(userFavorites.MoviesIDs, 1)
 
-	return userFavorites, nil
+	cacheMap := make(map[int]bool)
+	if u.favoriteCached {
+		userFavorites.MoviesData = append(userFavorites.MoviesData, tmdb.Movie{
+			ID: 1,
+		})
+		cacheMap[1] = true
+	}
+
+	return userFavorites, cacheMap, nil
 }
 
 func (u *usersServiceMock) AddUserFavorite(userFavs user_favorites.UserFavoritesInterface) *rest_errors.RestErr {
@@ -159,9 +168,16 @@ func (m *moviesServiceMock) GetMovieFromCache(movie movies.MovieInterface) (movi
 	return mov, nil
 }
 
-func (*moviesServiceMock) GetMovieById(movieId int) (*tmdb.Movie, *rest_errors.RestErr) {
-	// TODO
-	return nil, nil
+func (m *moviesServiceMock) GetMovieById(movieId int) (*tmdb.Movie, *rest_errors.RestErr) {
+	if !m.canGetMovie {
+		return nil, rest_errors.NewInternalServerError("Error when trying to get movie")
+	}
+
+	movieInfo := &tmdb.Movie{
+		ID: movieId,
+	}
+
+	return movieInfo, nil
 }
 
 func PrepareTest(request []byte, method string) *httptest.ResponseRecorder {
@@ -207,6 +223,7 @@ func TestMain(m *testing.M) {
 	users_service.UsersService = &usersServiceMock{
 		canGetFavorites: true,
 		canAddFavorite:  true,
+		favoriteCached:  true,
 	}
 
 	movies_service.MoviesService = &moviesServiceMock{
@@ -663,7 +680,7 @@ func TestDeleteDeleteError(t *testing.T) {
 	assert.EqualValues(t, "internal_server_error", receivedResponse.Err)
 }
 
-func TestGetUserFavoritesSuccess(t *testing.T) {
+func TestGetUserFavoritesSuccessCached(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(
 		user_favorites.UserFavorites{
 			UserID:    1,
@@ -690,8 +707,46 @@ func TestGetUserFavoritesSuccess(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, receivedResponse)
 	assert.EqualValues(t, http.StatusOK, w.Code)
-	assert.EqualValues(t, 1, len(receivedResponse.MoviesIDs))
-	assert.EqualValues(t, 1, receivedResponse.MoviesIDs[0])
+	assert.EqualValues(t, 1, len(receivedResponse.MoviesData))
+	assert.EqualValues(t, 1, receivedResponse.MoviesData[0].ID)
+}
+
+func TestGetUserFavoritesSuccessNotCached(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		user_favorites.UserFavorites{
+			UserID:    1,
+			MoviesIDs: []int{},
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "GET")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+
+	users_service.UsersService.(*usersServiceMock).favoriteCached = false
+
+	GetUserFavorites(c)
+
+	users_service.UsersService.(*usersServiceMock).favoriteCached = true
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse user_favorites.UserFavorites
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, receivedResponse)
+	assert.EqualValues(t, http.StatusOK, w.Code)
+	assert.EqualValues(t, 1, len(receivedResponse.MoviesData))
+	assert.EqualValues(t, 1, receivedResponse.MoviesData[0].ID)
+	assert.EqualValues(t, true, movies_service.MoviesService.(*moviesServiceMock).addedMovie)
+
+	movies_service.MoviesService.(*moviesServiceMock).addedMovie = false
 }
 
 func TestGetUserFavoritesInvalidUserID(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 )
 
 type UserFavoritesInterface interface {
-	GetFavorites() (UserFavoritesInterface, *rest_errors.RestErr)
+	GetFavorites() (UserFavoritesInterface, map[int]bool, *rest_errors.RestErr)
 	AddFavorite() *rest_errors.RestErr
 }
 

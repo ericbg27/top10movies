@@ -13,7 +13,7 @@ type usersServiceInterface interface {
 	GetUser(users.UserInterface) (users.UserInterface, *rest_errors.RestErr)
 	UpdateUser(users.UserInterface, bool) (users.UserInterface, *rest_errors.RestErr)
 	DeleteUser(users.UserInterface) *rest_errors.RestErr
-	GetUserFavorites(user_favorites.UserFavoritesInterface) (user_favorites.UserFavoritesInterface, *rest_errors.RestErr)
+	GetUserFavorites(user_favorites.UserFavoritesInterface) (user_favorites.UserFavoritesInterface, map[int]bool, *rest_errors.RestErr)
 	AddUserFavorite(user_favorites.UserFavoritesInterface) *rest_errors.RestErr
 }
 
@@ -78,15 +78,16 @@ func (s *usersService) DeleteUser(user users.UserInterface) *rest_errors.RestErr
 	return nil
 }
 
-func (s *usersService) GetUserFavorites(userFavorites user_favorites.UserFavoritesInterface) (user_favorites.UserFavoritesInterface, *rest_errors.RestErr) {
+func (s *usersService) GetUserFavorites(userFavorites user_favorites.UserFavoritesInterface) (user_favorites.UserFavoritesInterface, map[int]bool, *rest_errors.RestErr) {
 	var currentUserFavorites user_favorites.UserFavoritesInterface
+	var cachedIds map[int]bool
 	var err *rest_errors.RestErr
 
-	if currentUserFavorites, err = userFavorites.GetFavorites(); err != nil {
-		return nil, err
+	if currentUserFavorites, cachedIds, err = userFavorites.GetFavorites(); err != nil {
+		return nil, nil, err
 	}
 
-	return currentUserFavorites, nil
+	return currentUserFavorites, cachedIds, nil
 }
 
 func (s *usersService) AddUserFavorite(userFavorites user_favorites.UserFavoritesInterface) *rest_errors.RestErr {
