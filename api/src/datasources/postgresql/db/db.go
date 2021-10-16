@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	deleteCacheQuery = "DELETE FROM movies;"
+	deleteCacheQuery = "DELETE FROM movies AS m1 WHERE EXTRACT(EPOCH FROM (NOW() - m1.created_at)) >= $1;"
 )
 
 var (
@@ -64,7 +64,9 @@ func ClearMoviesCache() {
 
 		logger.Info("Clearing movies cache")
 
+		cachettlSeconds := cachettl * 60
+
 		// TODO: Improve cache clearing by saving the timestamp when records are saved and verifying if the elapsed time is bigger than cachettl or not
-		Client.Exec(context.Background(), deleteCacheQuery)
+		Client.Exec(context.Background(), deleteCacheQuery, cachettlSeconds)
 	}
 }
