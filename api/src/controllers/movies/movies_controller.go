@@ -20,6 +20,8 @@ func Search(c *gin.Context) {
 	result, searchErr := movies_service.MoviesService.SearchMovies(queryParams)
 	if searchErr != nil {
 		c.JSON(searchErr.Status, searchErr)
+
+		return
 	}
 
 	c.JSON(http.StatusOK, result)

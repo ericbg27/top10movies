@@ -28,6 +28,8 @@ var (
 	cachettl = config.GetConfig().Database.CacheTtl
 )
 
+// TODO: Create DB class for DAO testing
+
 func SetupDbConnection() {
 	config, err := pgxpool.ParseConfig(fmt.Sprintf("postgres://%s:%s@%s:%d/%s", user, password, host, port, dbname))
 	if err != nil {
@@ -66,7 +68,6 @@ func ClearMoviesCache() {
 
 		cachettlSeconds := cachettl * 60
 
-		// TODO: Improve cache clearing by saving the timestamp when records are saved and verifying if the elapsed time is bigger than cachettl or not
 		Client.Exec(context.Background(), deleteCacheQuery, cachettlSeconds)
 	}
 }

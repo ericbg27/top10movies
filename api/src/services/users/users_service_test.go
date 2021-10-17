@@ -5,106 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ericbg27/top10movies-api/src/domain/users"
-	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
+	users_mock "github.com/ericbg27/top10movies-api/src/mocks/domain/users"
 	"github.com/stretchr/testify/assert"
 )
-
-type userMock struct {
-	valid     bool
-	canGet    bool
-	canSave   bool
-	canUpdate bool
-	canDelete bool
-	FirstName string
-	LastName  string
-	Email     string
-}
-
-func (u userMock) Validate() (users.UserInterface, *rest_errors.RestErr) {
-	validatedUser := u
-
-	if validatedUser.valid == false {
-		return nil, rest_errors.NewBadRequestError("Invalid user")
-	}
-
-	return validatedUser, nil
-}
-
-func (u userMock) Get() (users.UserInterface, *rest_errors.RestErr) {
-	savedUser := u
-
-	if savedUser.canGet == false {
-		return nil, rest_errors.NewInternalServerError("Failed to get user")
-	}
-
-	savedUser.FirstName = "Test User"
-
-	return savedUser, nil
-}
-
-func (u userMock) GetById() (users.UserInterface, *rest_errors.RestErr) {
-	savedUser := u
-
-	if savedUser.canGet == false {
-		return nil, rest_errors.NewInternalServerError("Failed to get user by ID")
-	}
-
-	savedUser.FirstName = "Current Name"
-	savedUser.LastName = "Current Last Name"
-	savedUser.Email = "Current email"
-
-	return savedUser, nil
-}
-
-func (u userMock) Save() *rest_errors.RestErr {
-	if u.canSave == false {
-		return rest_errors.NewInternalServerError("Failed to save user")
-	}
-
-	return nil
-}
-
-func (u userMock) Update(newUser users.UserInterface, isPartial bool) (users.UserInterface, *rest_errors.RestErr) {
-	var validatedNewUser users.UserInterface
-	var err *rest_errors.RestErr
-
-	if validatedNewUser, err = newUser.Validate(); err != nil {
-		return nil, err
-	}
-
-	if u.canUpdate == false {
-		return nil, rest_errors.NewInternalServerError("Failed to update user")
-	}
-
-	toUpdateUser := validatedNewUser.(userMock)
-
-	if isPartial {
-		if toUpdateUser.FirstName != "" {
-			u.FirstName = toUpdateUser.FirstName
-		}
-		if toUpdateUser.LastName != "" {
-			u.LastName = toUpdateUser.LastName
-		}
-		if toUpdateUser.Email != "" {
-			u.Email = toUpdateUser.Email
-		}
-	} else {
-		u.FirstName = toUpdateUser.FirstName
-		u.LastName = toUpdateUser.LastName
-		u.Email = toUpdateUser.Email
-	}
-
-	return u, nil
-}
-
-func (u userMock) Delete() *rest_errors.RestErr {
-	if u.canDelete == false {
-		return rest_errors.NewInternalServerError("Failed to delete user")
-	}
-
-	return nil
-}
 
 func TestMain(m *testing.M) {
 	UsersService = &usersService{}
@@ -112,12 +15,12 @@ func TestMain(m *testing.M) {
 }
 
 func TestGetUserSuccess(t *testing.T) {
-	var user userMock
-	user.canGet = true
+	var user users_mock.UserMock
+	user.CanGet = true
 
 	result, err := UsersService.GetUser(user)
 
-	savedUser := result.(userMock)
+	savedUser := result.(users_mock.UserMock)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, savedUser)
@@ -126,8 +29,8 @@ func TestGetUserSuccess(t *testing.T) {
 }
 
 func TestGetUserFail(t *testing.T) {
-	var user userMock
-	user.canGet = false
+	var user users_mock.UserMock
+	user.CanGet = false
 
 	result, err := UsersService.GetUser(user)
 
@@ -139,14 +42,14 @@ func TestGetUserFail(t *testing.T) {
 }
 
 func TestCreateUserSuccess(t *testing.T) {
-	var user userMock
-	user.valid = true
-	user.canSave = true
+	var user users_mock.UserMock
+	user.Valid = true
+	user.CanSave = true
 	user.FirstName = "User to create"
 
 	result, err := UsersService.CreateUser(user)
 
-	createdUser := result.(userMock)
+	createdUser := result.(users_mock.UserMock)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, createdUser)
@@ -154,8 +57,8 @@ func TestCreateUserSuccess(t *testing.T) {
 }
 
 func TestCreateUserInvalidUser(t *testing.T) {
-	var user userMock
-	user.valid = false
+	var user users_mock.UserMock
+	user.Valid = false
 
 	result, err := UsersService.CreateUser(user)
 
@@ -167,9 +70,9 @@ func TestCreateUserInvalidUser(t *testing.T) {
 }
 
 func TestCreateUserFail(t *testing.T) {
-	var user userMock
-	user.valid = true
-	user.canSave = false
+	var user users_mock.UserMock
+	user.Valid = true
+	user.CanSave = false
 
 	result, err := UsersService.CreateUser(user)
 
@@ -181,17 +84,17 @@ func TestCreateUserFail(t *testing.T) {
 }
 
 func TestUpdateUserSuccess(t *testing.T) {
-	var user userMock
-	user.valid = true
-	user.canGet = true
-	user.canUpdate = true
+	var user users_mock.UserMock
+	user.Valid = true
+	user.CanGet = true
+	user.CanUpdate = true
 	user.FirstName = "Test Name"
 	user.LastName = "Test Last Name"
 	user.Email = "test@email.com"
 
 	result, err := UsersService.UpdateUser(user, false)
 
-	updatedUser := result.(userMock)
+	updatedUser := result.(users_mock.UserMock)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
@@ -201,17 +104,17 @@ func TestUpdateUserSuccess(t *testing.T) {
 }
 
 func TestPartialUpdateUserSuccess(t *testing.T) {
-	var user userMock
-	user.valid = true
-	user.canGet = true
-	user.canUpdate = true
+	var user users_mock.UserMock
+	user.Valid = true
+	user.CanGet = true
+	user.CanUpdate = true
 	user.FirstName = ""
 	user.LastName = "Test Last Name"
 	user.Email = "test@email.com"
 
 	result, err := UsersService.UpdateUser(user, true)
 
-	updatedUser := result.(userMock)
+	updatedUser := result.(users_mock.UserMock)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
@@ -221,10 +124,10 @@ func TestPartialUpdateUserSuccess(t *testing.T) {
 }
 
 func TestUpdateUserInvalidUserID(t *testing.T) {
-	var user userMock
-	user.valid = true
-	user.canGet = false
-	user.canUpdate = true
+	var user users_mock.UserMock
+	user.Valid = true
+	user.CanGet = false
+	user.CanUpdate = true
 
 	result, err := UsersService.UpdateUser(user, false)
 
@@ -236,10 +139,10 @@ func TestUpdateUserInvalidUserID(t *testing.T) {
 }
 
 func TestUpdateUserUpdateError(t *testing.T) {
-	var user userMock
-	user.valid = true
-	user.canGet = true
-	user.canUpdate = false
+	var user users_mock.UserMock
+	user.Valid = true
+	user.CanGet = true
+	user.CanUpdate = false
 
 	result, err := UsersService.UpdateUser(user, false)
 
@@ -251,9 +154,9 @@ func TestUpdateUserUpdateError(t *testing.T) {
 }
 
 func TestUpdateUserInvalidUser(t *testing.T) {
-	var user userMock
-	user.valid = false
-	user.canGet = true
+	var user users_mock.UserMock
+	user.Valid = false
+	user.CanGet = true
 
 	result, err := UsersService.UpdateUser(user, false)
 
@@ -265,9 +168,9 @@ func TestUpdateUserInvalidUser(t *testing.T) {
 }
 
 func TestDeleteUserSuccess(t *testing.T) {
-	var user userMock
-	user.canGet = true
-	user.canDelete = true
+	var user users_mock.UserMock
+	user.CanGet = true
+	user.CanDelete = true
 
 	err := UsersService.DeleteUser(user)
 
@@ -275,9 +178,9 @@ func TestDeleteUserSuccess(t *testing.T) {
 }
 
 func TestDeleteUserGetError(t *testing.T) {
-	var user userMock
-	user.canGet = false
-	user.canDelete = true
+	var user users_mock.UserMock
+	user.CanGet = false
+	user.CanDelete = true
 
 	err := UsersService.DeleteUser(user)
 
@@ -288,9 +191,9 @@ func TestDeleteUserGetError(t *testing.T) {
 }
 
 func TestDeleteUserDeleteError(t *testing.T) {
-	var user userMock
-	user.canGet = true
-	user.canDelete = false
+	var user users_mock.UserMock
+	user.CanGet = true
+	user.CanDelete = false
 
 	err := UsersService.DeleteUser(user)
 

@@ -13,6 +13,8 @@ import (
 	"github.com/ericbg27/top10movies-api/src/domain/movies"
 	"github.com/ericbg27/top10movies-api/src/domain/user_favorites"
 	"github.com/ericbg27/top10movies-api/src/domain/users"
+	movies_service_mock "github.com/ericbg27/top10movies-api/src/mocks/services/movies"
+	users_service_mock "github.com/ericbg27/top10movies-api/src/mocks/services/users"
 	movies_service "github.com/ericbg27/top10movies-api/src/services/movies"
 	users_service "github.com/ericbg27/top10movies-api/src/services/users"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
@@ -23,162 +25,8 @@ import (
 )
 
 var (
-	c        *gin.Context
-	mockDb   map[string]string
-	mockDbID map[int64]users.User
-	now      string
+	c *gin.Context
 )
-
-type usersServiceMock struct {
-	canGetFavorites bool
-	canAddFavorite  bool
-	favoriteCached  bool
-}
-
-func (u *usersServiceMock) CreateUser(user users.UserInterface) (users.UserInterface, *rest_errors.RestErr) {
-	usr := user.(users.User)
-	if _, ok := mockDb[usr.Email]; ok {
-		return nil, rest_errors.NewInternalServerError("Error when trying to save user")
-	}
-
-	usr.DateCreated = now
-	usr.ID = 2
-
-	return usr, nil
-}
-
-func (u *usersServiceMock) GetUser(user users.UserInterface) (users.UserInterface, *rest_errors.RestErr) {
-	usr := user.(users.User)
-	if savedPassword, ok := mockDb[usr.Email]; ok {
-		savedUser := users.User{
-			Email:    usr.Email,
-			Password: savedPassword,
-		}
-
-		return savedUser, nil
-	}
-
-	return nil, rest_errors.NewNotFoundError("User not found")
-}
-
-func (u *usersServiceMock) UpdateUser(user users.UserInterface, isPartial bool) (users.UserInterface, *rest_errors.RestErr) {
-	newUser := user.(users.User)
-
-	currentUser, ok := mockDbID[newUser.ID]
-	if !ok {
-		return nil, rest_errors.NewInternalServerError("Error when trying to update user")
-	}
-
-	if isPartial {
-		if newUser.FirstName == "" {
-			newUser.FirstName = currentUser.FirstName
-		}
-		if newUser.LastName == "" {
-			newUser.LastName = currentUser.LastName
-		}
-		if newUser.Email == "" {
-			newUser.Email = currentUser.Email
-		}
-	}
-
-	return newUser, nil
-}
-
-func (u *usersServiceMock) DeleteUser(user users.UserInterface) *rest_errors.RestErr {
-	usr := user.(users.User)
-
-	_, ok := mockDbID[usr.ID]
-	if !ok {
-		return rest_errors.NewInternalServerError("Error when trying to delete user")
-	}
-
-	return nil
-}
-
-func (u *usersServiceMock) GetUserFavorites(userFavs user_favorites.UserFavoritesInterface) (user_favorites.UserFavoritesInterface, map[int]bool, *rest_errors.RestErr) {
-	userFavorites := userFavs.(user_favorites.UserFavorites)
-
-	if !u.canGetFavorites {
-		return nil, nil, rest_errors.NewInternalServerError("Error when trying to get user favorites")
-	}
-
-	userFavorites.MoviesIDs = append(userFavorites.MoviesIDs, 1)
-
-	cacheMap := make(map[int]bool)
-	if u.favoriteCached {
-		userFavorites.MoviesData = append(userFavorites.MoviesData, tmdb.Movie{
-			ID: 1,
-		})
-		cacheMap[1] = true
-	}
-
-	return userFavorites, cacheMap, nil
-}
-
-func (u *usersServiceMock) AddUserFavorite(userFavs user_favorites.UserFavoritesInterface) *rest_errors.RestErr {
-	if !u.canAddFavorite {
-		return rest_errors.NewInternalServerError("Error when trying to add user favorite")
-	}
-
-	return nil
-}
-
-type moviesServiceMock struct {
-	canAddMovie    bool
-	canGetMovie    bool
-	hasMovieCached bool
-	addedMovie     bool
-}
-
-func (m *moviesServiceMock) SearchMovies(searchOptions map[string]string) (*tmdb.MovieSearchResults, *rest_errors.RestErr) {
-	return nil, nil
-}
-
-func (m *moviesServiceMock) AddMovie(movie movies.MovieInterface) *rest_errors.RestErr {
-	if !m.canAddMovie {
-		return rest_errors.NewInternalServerError("Error when trying to add movie")
-	}
-
-	m.addedMovie = true
-
-	return nil
-}
-
-func (m *moviesServiceMock) GetMovieFromCache(movie movies.MovieInterface) (movies.MovieInterface, *rest_errors.RestErr) {
-	mov := movie.(movies.MovieInfo)
-
-	if !m.canGetMovie {
-		return nil, rest_errors.NewInternalServerError("Error when trying to get movie")
-	}
-
-	if m.hasMovieCached {
-		mov.Movie = tmdb.Movie{
-			Title: "Example Movie Title",
-			ID:    1,
-		}
-		mov.CreatedAt = "01-02-2006"
-	} else {
-		mov.Movie = tmdb.Movie{
-			Title: "",
-			ID:    -1,
-		}
-		mov.CreatedAt = ""
-	}
-
-	return mov, nil
-}
-
-func (m *moviesServiceMock) GetMovieById(movieId int) (*tmdb.Movie, *rest_errors.RestErr) {
-	if !m.canGetMovie {
-		return nil, rest_errors.NewInternalServerError("Error when trying to get movie")
-	}
-
-	movieInfo := &tmdb.Movie{
-		ID: movieId,
-	}
-
-	return movieInfo, nil
-}
 
 func PrepareTest(request []byte, method string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
@@ -201,10 +49,10 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	mockDb = map[string]string{
+	users_service_mock.MockDb = map[string]string{
 		"johndoe@gmail.com": string(hashedPass),
 	}
-	mockDbID = map[int64]users.User{
+	users_service_mock.MockDbID = map[int64]users.User{
 		1: {
 			ID:          1,
 			FirstName:   "John",
@@ -218,22 +66,31 @@ func TestMain(m *testing.M) {
 
 	gin.SetMode(gin.TestMode)
 
-	now = time.Now().Format(layoutISO)
+	users_service_mock.Now = time.Now().Format(layoutISO)
 
-	users_service.UsersService = &usersServiceMock{
-		canGetFavorites: true,
-		canAddFavorite:  true,
-		favoriteCached:  true,
+	oldUsersService := users_service.UsersService
+
+	users_service.UsersService = &users_service_mock.UsersServiceMock{
+		CanGetFavorites: true,
+		CanAddFavorite:  true,
+		FavoriteCached:  true,
 	}
 
-	movies_service.MoviesService = &moviesServiceMock{
-		canAddMovie:    true,
-		canGetMovie:    true,
-		hasMovieCached: true,
-		addedMovie:     false,
+	oldMoviesService := movies_service.MoviesService
+
+	movies_service.MoviesService = &movies_service_mock.MoviesServiceMock{
+		CanAddMovie:    true,
+		CanGetMovie:    true,
+		HasMovieCached: true,
+		AddedMovie:     false,
 	}
 
-	os.Exit(m.Run())
+	exitCode := m.Run()
+
+	users_service.UsersService = oldUsersService
+	movies_service.MoviesService = oldMoviesService
+
+	os.Exit(exitCode)
 }
 
 func TestLoginSuccess(t *testing.T) {
@@ -363,7 +220,7 @@ func TestCreateSuccess(t *testing.T) {
 	assert.EqualValues(t, "Doe", receivedResponse.LastName)
 	assert.EqualValues(t, "johndoe2@gmail.com", receivedResponse.Email)
 	assert.EqualValues(t, "", receivedResponse.Password)
-	assert.EqualValues(t, now, receivedResponse.DateCreated)
+	assert.EqualValues(t, users_service_mock.Now, receivedResponse.DateCreated)
 }
 
 func TestCreateInvalidJSON(t *testing.T) {
@@ -726,11 +583,11 @@ func TestGetUserFavoritesSuccessNotCached(t *testing.T) {
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 
-	users_service.UsersService.(*usersServiceMock).favoriteCached = false
+	users_service.UsersService.(*users_service_mock.UsersServiceMock).FavoriteCached = false
 
 	GetUserFavorites(c)
 
-	users_service.UsersService.(*usersServiceMock).favoriteCached = true
+	users_service.UsersService.(*users_service_mock.UsersServiceMock).FavoriteCached = true
 
 	c.Params = make([]gin.Param, 0)
 
@@ -744,9 +601,9 @@ func TestGetUserFavoritesSuccessNotCached(t *testing.T) {
 	assert.EqualValues(t, http.StatusOK, w.Code)
 	assert.EqualValues(t, 1, len(receivedResponse.MoviesData))
 	assert.EqualValues(t, 1, receivedResponse.MoviesData[0].ID)
-	assert.EqualValues(t, true, movies_service.MoviesService.(*moviesServiceMock).addedMovie)
+	assert.EqualValues(t, true, movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).AddedMovie)
 
-	movies_service.MoviesService.(*moviesServiceMock).addedMovie = false
+	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).AddedMovie = false
 }
 
 func TestGetUserFavoritesInvalidUserID(t *testing.T) {
@@ -791,11 +648,11 @@ func TestGetUserFavoritesFailure(t *testing.T) {
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 
-	users_service.UsersService.(*usersServiceMock).canGetFavorites = false
+	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanGetFavorites = false
 
 	GetUserFavorites(c)
 
-	users_service.UsersService.(*usersServiceMock).canGetFavorites = true
+	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanGetFavorites = true
 
 	c.Params = make([]gin.Param, 0)
 
@@ -840,7 +697,7 @@ func TestAddUserFavoritesSuccessMovieCached(t *testing.T) {
 
 	assert.EqualValues(t, "", receivedResponse)
 	assert.EqualValues(t, http.StatusOK, w.Code)
-	assert.EqualValues(t, false, movies_service.MoviesService.(*moviesServiceMock).addedMovie)
+	assert.EqualValues(t, false, movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).AddedMovie)
 }
 
 func TestAddUserFavoritesSuccessMovieNotCached(t *testing.T) {
@@ -861,11 +718,11 @@ func TestAddUserFavoritesSuccessMovieNotCached(t *testing.T) {
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 
-	movies_service.MoviesService.(*moviesServiceMock).hasMovieCached = false
+	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = false
 
 	AddUserFavorite(c)
 
-	movies_service.MoviesService.(*moviesServiceMock).hasMovieCached = true
+	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = true
 
 	c.Params = make([]gin.Param, 0)
 
@@ -875,7 +732,7 @@ func TestAddUserFavoritesSuccessMovieNotCached(t *testing.T) {
 
 	assert.EqualValues(t, "", receivedResponse)
 	assert.EqualValues(t, http.StatusOK, w.Code)
-	assert.EqualValues(t, true, movies_service.MoviesService.(*moviesServiceMock).addedMovie)
+	assert.EqualValues(t, true, movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).AddedMovie)
 }
 
 func TestAddUserFavoritesInvalidUserID(t *testing.T) {
@@ -952,11 +809,11 @@ func TestAddUserFavoritesGetMovieError(t *testing.T) {
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 
-	movies_service.MoviesService.(*moviesServiceMock).canGetMovie = false
+	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanGetMovie = false
 
 	AddUserFavorite(c)
 
-	movies_service.MoviesService.(*moviesServiceMock).canGetMovie = true
+	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanGetMovie = true
 
 	c.Params = make([]gin.Param, 0)
 
@@ -990,13 +847,13 @@ func TestAddUserFavoritesAddMovieErrorWhenNotCached(t *testing.T) {
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 
-	movies_service.MoviesService.(*moviesServiceMock).hasMovieCached = false
-	movies_service.MoviesService.(*moviesServiceMock).canAddMovie = false
+	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = false
+	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanAddMovie = false
 
 	AddUserFavorite(c)
 
-	movies_service.MoviesService.(*moviesServiceMock).hasMovieCached = true
-	movies_service.MoviesService.(*moviesServiceMock).canAddMovie = true
+	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = true
+	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanAddMovie = true
 
 	c.Params = make([]gin.Param, 0)
 
@@ -1030,11 +887,11 @@ func TestAddUserFavoritesAddUserFavoriteError(t *testing.T) {
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 
-	users_service.UsersService.(*usersServiceMock).canAddFavorite = false
+	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanAddFavorite = false
 
 	AddUserFavorite(c)
 
-	users_service.UsersService.(*usersServiceMock).canAddFavorite = false
+	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanAddFavorite = false
 
 	c.Params = make([]gin.Param, 0)
 

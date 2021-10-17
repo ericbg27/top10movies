@@ -1,0 +1,102 @@
+package users
+
+import (
+	"github.com/ericbg27/top10movies-api/src/domain/users"
+	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
+)
+
+type UserMock struct {
+	Valid     bool
+	CanGet    bool
+	CanSave   bool
+	CanUpdate bool
+	CanDelete bool
+	FirstName string
+	LastName  string
+	Email     string
+}
+
+func (u UserMock) Validate() (users.UserInterface, *rest_errors.RestErr) {
+	validatedUser := u
+
+	if !validatedUser.Valid {
+		return nil, rest_errors.NewBadRequestError("Invalid user")
+	}
+
+	return validatedUser, nil
+}
+
+func (u UserMock) Get() (users.UserInterface, *rest_errors.RestErr) {
+	savedUser := u
+
+	if !savedUser.CanGet {
+		return nil, rest_errors.NewInternalServerError("Failed to get user")
+	}
+
+	savedUser.FirstName = "Test User"
+
+	return savedUser, nil
+}
+
+func (u UserMock) GetById() (users.UserInterface, *rest_errors.RestErr) {
+	savedUser := u
+
+	if !savedUser.CanGet {
+		return nil, rest_errors.NewInternalServerError("Failed to get user by ID")
+	}
+
+	savedUser.FirstName = "Current Name"
+	savedUser.LastName = "Current Last Name"
+	savedUser.Email = "Current email"
+
+	return savedUser, nil
+}
+
+func (u UserMock) Save() *rest_errors.RestErr {
+	if !u.CanSave {
+		return rest_errors.NewInternalServerError("Failed to save user")
+	}
+
+	return nil
+}
+
+func (u UserMock) Update(newUser users.UserInterface, isPartial bool) (users.UserInterface, *rest_errors.RestErr) {
+	var validatedNewUser users.UserInterface
+	var err *rest_errors.RestErr
+
+	if validatedNewUser, err = newUser.Validate(); err != nil {
+		return nil, err
+	}
+
+	if !u.CanUpdate {
+		return nil, rest_errors.NewInternalServerError("Failed to update user")
+	}
+
+	toUpdateUser := validatedNewUser.(UserMock)
+
+	if isPartial {
+		if toUpdateUser.FirstName != "" {
+			u.FirstName = toUpdateUser.FirstName
+		}
+		if toUpdateUser.LastName != "" {
+			u.LastName = toUpdateUser.LastName
+		}
+		if toUpdateUser.Email != "" {
+			u.Email = toUpdateUser.Email
+		}
+	} else {
+		u.FirstName = toUpdateUser.FirstName
+		u.LastName = toUpdateUser.LastName
+		u.Email = toUpdateUser.Email
+	}
+
+	return u, nil
+}
+
+func (u UserMock) Delete() *rest_errors.RestErr {
+	if !u.CanDelete {
+		return rest_errors.NewInternalServerError("Failed to delete user")
+	}
+
+	return nil
+}
