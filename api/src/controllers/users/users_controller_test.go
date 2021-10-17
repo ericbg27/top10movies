@@ -68,11 +68,15 @@ func TestMain(m *testing.M) {
 
 	users_service_mock.Now = time.Now().Format(layoutISO)
 
+	oldUsersService := users_service.UsersService
+
 	users_service.UsersService = &users_service_mock.UsersServiceMock{
 		CanGetFavorites: true,
 		CanAddFavorite:  true,
 		FavoriteCached:  true,
 	}
+
+	oldMoviesService := movies_service.MoviesService
 
 	movies_service.MoviesService = &movies_service_mock.MoviesServiceMock{
 		CanAddMovie:    true,
@@ -81,7 +85,12 @@ func TestMain(m *testing.M) {
 		AddedMovie:     false,
 	}
 
-	os.Exit(m.Run())
+	exitCode := m.Run()
+
+	users_service.UsersService = oldUsersService
+	movies_service.MoviesService = oldMoviesService
+
+	os.Exit(exitCode)
 }
 
 func TestLoginSuccess(t *testing.T) {

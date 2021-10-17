@@ -43,6 +43,8 @@ func PrepareTest(request []byte, method string) *httptest.ResponseRecorder {
 func TestMain(m *testing.M) {
 	gin.SetMode(gin.TestMode)
 
+	oldMoviesService := movies_service.MoviesService
+
 	movies_service.MoviesService = &movies_service_mock.MoviesServiceMock{
 		CanAddMovie:    true,
 		CanGetMovie:    true,
@@ -51,7 +53,11 @@ func TestMain(m *testing.M) {
 		CanSearch:      true,
 	}
 
-	os.Exit(m.Run())
+	exitCode := m.Run()
+
+	movies_service.MoviesService = oldMoviesService
+
+	os.Exit(exitCode)
 }
 
 func TestSearchSuccess(t *testing.T) {
