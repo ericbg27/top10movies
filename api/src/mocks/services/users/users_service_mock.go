@@ -35,6 +35,7 @@ func (u *UsersServiceMock) GetUser(user users.UserInterface) (users.UserInterfac
 	usr := user.(users.User)
 	if savedPassword, ok := MockDb[usr.Email]; ok {
 		savedUser := users.User{
+			ID:       usr.ID,
 			Email:    usr.Email,
 			Password: savedPassword,
 		}

@@ -13,10 +13,12 @@ import (
 	"github.com/ericbg27/top10movies-api/src/domain/movies"
 	"github.com/ericbg27/top10movies-api/src/domain/user_favorites"
 	"github.com/ericbg27/top10movies-api/src/domain/users"
+	authorization_mock "github.com/ericbg27/top10movies-api/src/mocks/authorization"
 	movies_service_mock "github.com/ericbg27/top10movies-api/src/mocks/services/movies"
 	users_service_mock "github.com/ericbg27/top10movies-api/src/mocks/services/users"
 	movies_service "github.com/ericbg27/top10movies-api/src/services/movies"
 	users_service "github.com/ericbg27/top10movies-api/src/services/users"
+	"github.com/ericbg27/top10movies-api/src/utils/authorization"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 	"github.com/gin-gonic/gin"
 	"github.com/ryanbradynd05/go-tmdb"
@@ -85,10 +87,17 @@ func TestMain(m *testing.M) {
 		AddedMovie:     false,
 	}
 
+	oldAuthorizationManager := authorization.AuthManager
+
+	authorization.AuthManager = &authorization_mock.AuthorizationMock{
+		CanCreate: true,
+	}
+
 	exitCode := m.Run()
 
 	users_service.UsersService = oldUsersService
 	movies_service.MoviesService = oldMoviesService
+	authorization.AuthManager = oldAuthorizationManager
 
 	os.Exit(exitCode)
 }
@@ -96,6 +105,7 @@ func TestMain(m *testing.M) {
 func TestLoginSuccess(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(
 		users.User{
+			ID:       1,
 			Email:    "johndoe@gmail.com",
 			Password: "123456",
 		},
@@ -110,8 +120,14 @@ func TestLoginSuccess(t *testing.T) {
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
+	var response map[string]interface{}
+	err = json.Unmarshal(responseData, &response)
+
+	assert.Nil(t, err)
 	assert.EqualValues(t, http.StatusOK, w.Code)
-	assert.EqualValues(t, "null", string(responseData))
+
+	r := response["token"].(string)
+	assert.EqualValues(t, "token_1", r)
 }
 
 func TestLoginWrongPassword(t *testing.T) {

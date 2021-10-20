@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/gin-gonic/gin v1.7.1
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/jackc/pgtype v1.8.1
 	github.com/jackc/pgx/v4 v4.13.0
 	github.com/jackc/puddle v1.1.4 // indirect

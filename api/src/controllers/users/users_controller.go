@@ -10,6 +10,7 @@ import (
 	"github.com/ericbg27/top10movies-api/src/domain/users"
 	movies_service "github.com/ericbg27/top10movies-api/src/services/movies"
 	users_service "github.com/ericbg27/top10movies-api/src/services/users"
+	"github.com/ericbg27/top10movies-api/src/utils/authorization"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 	"github.com/gin-gonic/gin"
@@ -55,8 +56,15 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// TODO: Create a token and send to the user
-	c.JSON(http.StatusOK, nil)
+	token, err := authorization.AuthManager.CreateToken(savedUser.ID)
+	if err != nil {
+		tokenErr := rest_errors.NewInternalServerError("Could not generate jwt access token")
+		c.JSON(tokenErr.Status, tokenErr)
+
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
 func Create(c *gin.Context) {
