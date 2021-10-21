@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ericbg27/top10movies-api/src/datasources/postgresql/db"
+	redisdb "github.com/ericbg27/top10movies-api/src/datasources/redis"
 	"github.com/ericbg27/top10movies-api/src/utils/config"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
 )
@@ -23,6 +24,8 @@ func StartApplication() {
 	defer db.Client.Conn().Close(context.Background())
 
 	go db.ClearMoviesCache()
+
+	redisdb.SetupRedisConnection()
 
 	cfg := config.GetConfig()
 

@@ -4,15 +4,17 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+
+	auth "github.com/ericbg27/top10movies-api/src/utils/authorization"
 )
 
 type AuthorizationMock struct {
 	CanCreate bool
 }
 
-func (a AuthorizationMock) CreateToken(userId int64) (string, error) {
+func (a AuthorizationMock) CreateToken(userId int64) (*auth.TokenDetails, error) {
 	if !a.CanCreate {
-		return "", errors.New("failed to create token")
+		return nil, errors.New("failed to create token")
 	}
 
 	var sb strings.Builder
@@ -22,5 +24,9 @@ func (a AuthorizationMock) CreateToken(userId int64) (string, error) {
 
 	s := sb.String()
 
-	return s, nil
+	tokenInfo := &auth.TokenDetails{
+		AccessToken: s,
+	}
+
+	return tokenInfo, nil
 }

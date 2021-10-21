@@ -120,13 +120,13 @@ func TestLoginSuccess(t *testing.T) {
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
-	var response map[string]interface{}
+	var response map[string]string
 	err = json.Unmarshal(responseData, &response)
 
 	assert.Nil(t, err)
 	assert.EqualValues(t, http.StatusOK, w.Code)
 
-	r := response["token"].(string)
+	r := response["access_token"]
 	assert.EqualValues(t, "token_1", r)
 }
 
