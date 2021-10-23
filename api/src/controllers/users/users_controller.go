@@ -110,9 +110,12 @@ func Create(c *gin.Context) {
 }
 
 func Update(c *gin.Context) {
-	userID, IdErr := getID(c.Param("user_id"))
-	if IdErr != nil {
-		c.JSON(IdErr.Status, IdErr)
+	bearToken := c.Request.Header.Get("Authorization")
+
+	userID, err := authorization.AuthManager.FetchAuth(bearToken)
+	if err != nil {
+		authErr := rest_errors.NewUnauthorizedError("Invalid JWT token")
+		c.JSON(authErr.Status, authErr)
 
 		return
 	}
@@ -125,7 +128,7 @@ func Update(c *gin.Context) {
 		return
 	}
 
-	user.ID = userID
+	user.ID = int64(userID)
 
 	isPartial := c.Request.Method == http.MethodPatch
 
@@ -143,9 +146,12 @@ func Update(c *gin.Context) {
 }
 
 func Delete(c *gin.Context) {
-	userID, IdErr := getID(c.Param("user_id"))
-	if IdErr != nil {
-		c.JSON(IdErr.Status, IdErr)
+	bearToken := c.Request.Header.Get("Authorization")
+
+	userID, err := authorization.AuthManager.FetchAuth(bearToken)
+	if err != nil {
+		authErr := rest_errors.NewUnauthorizedError("Invalid JWT token")
+		c.JSON(authErr.Status, authErr)
 
 		return
 	}
@@ -158,7 +164,7 @@ func Delete(c *gin.Context) {
 		return
 	}
 
-	user.ID = userID
+	user.ID = int64(userID)
 
 	deleteErr := users_service.UsersService.DeleteUser(user)
 	if deleteErr != nil {
@@ -218,9 +224,12 @@ func GetUserFavorites(c *gin.Context) {
 }
 
 func AddUserFavorite(c *gin.Context) {
-	userID, userIdErr := getID(c.Param("user_id"))
-	if userIdErr != nil {
-		c.JSON(userIdErr.Status, userIdErr)
+	bearToken := c.Request.Header.Get("Authorization")
+
+	userID, err := authorization.AuthManager.FetchAuth(bearToken)
+	if err != nil {
+		authErr := rest_errors.NewUnauthorizedError("Invalid JWT token")
+		c.JSON(authErr.Status, authErr)
 
 		return
 	}
@@ -234,9 +243,9 @@ func AddUserFavorite(c *gin.Context) {
 		return
 	}
 
-	movieCacheResult, err := movies_service.MoviesService.GetMovieFromCache(movie)
-	if err != nil {
-		c.JSON(err.Status, err)
+	movieCacheResult, cacheErr := movies_service.MoviesService.GetMovieFromCache(movie)
+	if cacheErr != nil {
+		c.JSON(cacheErr.Status, cacheErr)
 
 		return
 	}
@@ -252,7 +261,7 @@ func AddUserFavorite(c *gin.Context) {
 	}
 
 	var userFavorite user_favorites.UserFavorites
-	userFavorite.UserID = userID
+	userFavorite.UserID = int64(userID)
 	userFavorite.MoviesIDs = append(userFavorite.MoviesIDs, movie.Movie.ID)
 
 	addErr := users_service.UsersService.AddUserFavorite(userFavorite)

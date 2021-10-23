@@ -30,3 +30,8 @@ func (a AuthorizationMock) CreateToken(userId int64) (*auth.TokenDetails, error)
 
 	return tokenInfo, nil
 }
+
+func (a AuthorizationMock) FetchAuth(bearToken string) (uint64, error) {
+	// TODO
+	return 0, nil
+}

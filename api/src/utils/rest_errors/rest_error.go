@@ -16,6 +16,7 @@ const (
 	badRequestString          = "bad_request"
 	notFoundString            = "not_found"
 	internalServerErrorString = "internal_server_error"
+	unauthorizedString        = "unauthorized"
 )
 
 func (r RestErr) Error() string {
@@ -51,5 +52,13 @@ func NewInternalServerError(message string) *RestErr {
 		Message: message,
 		Status:  http.StatusInternalServerError,
 		Err:     internalServerErrorString,
+	}
+}
+
+func NewUnauthorizedError(message string) *RestErr {
+	return &RestErr{
+		Message: message,
+		Status:  http.StatusUnauthorized,
+		Err:     unauthorizedString,
 	}
 }

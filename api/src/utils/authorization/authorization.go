@@ -1,14 +1,21 @@
 package authorization
 
 import (
+	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	redisdb "github.com/ericbg27/top10movies-api/src/datasources/redis"
 	"github.com/gofrs/uuid"
 	"github.com/golang-jwt/jwt"
 )
+
+type AccessDetails struct {
+	accessUuid string
+	userId     uint64
+}
 
 type TokenDetails struct {
 	AccessToken  string
@@ -21,6 +28,7 @@ type TokenDetails struct {
 
 type AuthorizationManagerInterface interface {
 	CreateToken(int64) (*TokenDetails, error)
+	FetchAuth(bearToken string) (uint64, error)
 }
 
 type AuthorizationManager struct {
@@ -98,4 +106,78 @@ func (a AuthorizationManager) saveTokenMetadata(userId int64, tokenInfo *TokenDe
 	}
 
 	return nil
+}
+
+func (a AuthorizationManager) extractToken(bearToken string) string {
+	bearTokenArgs := strings.Split(bearToken, " ")
+	if len(bearTokenArgs) == 2 {
+		return bearTokenArgs[2]
+	}
+
+	return ""
+}
+
+func (a AuthorizationManager) verifyToken(bearToken string) (*jwt.Token, error) {
+	tokenString := a.extractToken(bearToken)
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return []byte(a.accessSecret), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := token.Claims.(jwt.Claims); !ok && !token.Valid {
+		return nil, err
+	}
+
+	return token, nil
+}
+
+func (a AuthorizationManager) extractTokenMetadata(bearToken string) (*AccessDetails, error) {
+	token, err := a.verifyToken(bearToken)
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if ok && token.Valid {
+		accessUuid, ok := claims["access_uuid"].(string)
+		if !ok {
+			return nil, err
+		}
+
+		userId, err := strconv.ParseUint(fmt.Sprintf("%.f", claims["user_id"]), 10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		return &AccessDetails{
+			accessUuid: accessUuid,
+			userId:     userId,
+		}, nil
+	}
+
+	return nil, err
+}
+
+func (a AuthorizationManager) FetchAuth(bearToken string) (uint64, error) {
+	accessDetails, err := a.extractTokenMetadata(bearToken)
+	if err != nil {
+		return 0, err
+	}
+
+	userId, err := redisdb.Client.Get(accessDetails.accessUuid).Result()
+	if err != nil {
+		return 0, err
+	}
+
+	userID, _ := strconv.ParseUint(userId, 10, 64)
+
+	return userID, nil
 }
