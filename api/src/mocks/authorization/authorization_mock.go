@@ -9,7 +9,9 @@ import (
 )
 
 type AuthorizationMock struct {
-	CanCreate bool
+	CanCreate  bool
+	Authorized bool
+	WrongID    bool
 }
 
 func (a AuthorizationMock) CreateToken(userId int64) (*auth.TokenDetails, error) {
@@ -32,6 +34,15 @@ func (a AuthorizationMock) CreateToken(userId int64) (*auth.TokenDetails, error)
 }
 
 func (a AuthorizationMock) FetchAuth(bearToken string) (uint64, error) {
-	// TODO
-	return 0, nil
+	if !a.Authorized {
+		return 0, errors.New("not authorized")
+	}
+
+	if a.WrongID {
+		return 0, nil
+	}
+
+	id, _ := strconv.Atoi(strings.Split(bearToken, "_")[1])
+
+	return uint64(id), nil
 }

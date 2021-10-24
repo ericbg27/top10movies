@@ -120,6 +120,20 @@ func Update(c *gin.Context) {
 		return
 	}
 
+	requestUserID, IdErr := getID(c.Param("user_id"))
+	if IdErr != nil {
+		c.JSON(IdErr.Status, IdErr)
+
+		return
+	}
+
+	if requestUserID != int64(userID) {
+		wrongIdErr := rest_errors.NewUnauthorizedError("User ID in the request does not match token user ID")
+		c.JSON(wrongIdErr.Status, wrongIdErr)
+
+		return
+	}
+
 	var user users.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		restErr := rest_errors.NewBadRequestError("Invalid JSON body")
@@ -152,6 +166,20 @@ func Delete(c *gin.Context) {
 	if err != nil {
 		authErr := rest_errors.NewUnauthorizedError("Invalid JWT token")
 		c.JSON(authErr.Status, authErr)
+
+		return
+	}
+
+	requestUserID, IdErr := getID(c.Param("user_id"))
+	if IdErr != nil {
+		c.JSON(IdErr.Status, IdErr)
+
+		return
+	}
+
+	if requestUserID != int64(userID) {
+		wrongIdErr := rest_errors.NewUnauthorizedError("User ID in the request does not match token user ID")
+		c.JSON(wrongIdErr.Status, wrongIdErr)
 
 		return
 	}
@@ -230,6 +258,20 @@ func AddUserFavorite(c *gin.Context) {
 	if err != nil {
 		authErr := rest_errors.NewUnauthorizedError("Invalid JWT token")
 		c.JSON(authErr.Status, authErr)
+
+		return
+	}
+
+	requestUserID, IdErr := getID(c.Param("user_id"))
+	if IdErr != nil {
+		c.JSON(IdErr.Status, IdErr)
+
+		return
+	}
+
+	if requestUserID != int64(userID) {
+		wrongIdErr := rest_errors.NewUnauthorizedError("User ID in the request does not match token user ID")
+		c.JSON(wrongIdErr.Status, wrongIdErr)
 
 		return
 	}

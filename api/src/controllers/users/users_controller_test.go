@@ -90,7 +90,9 @@ func TestMain(m *testing.M) {
 	oldAuthorizationManager := authorization.AuthManager
 
 	authorization.AuthManager = &authorization_mock.AuthorizationMock{
-		CanCreate: true,
+		CanCreate:  true,
+		Authorized: true,
+		WrongID:    false,
 	}
 
 	exitCode := m.Run()
@@ -303,10 +305,12 @@ func TestUpdateSuccess(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "POST")
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+	c.Request.Header.Set("Authorization", "token_1")
 
 	Update(c)
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -336,10 +340,12 @@ func TestUpdatePartialSuccess(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "PATCH")
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+	c.Request.Header.Set("Authorization", "token_1")
 
 	Update(c)
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -368,8 +374,11 @@ func TestUpdateInvalidUserID(t *testing.T) {
 	}
 
 	w := PrepareTest(exampleJsonReq, "POST")
+	c.Request.Header.Set("Authorization", "token_1")
 
 	Update(c)
+
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -383,6 +392,78 @@ func TestUpdateInvalidUserID(t *testing.T) {
 	assert.EqualValues(t, http.StatusBadRequest, receivedResponse.Status)
 }
 
+func TestUpdateInvalidToken(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		users.User{
+			FirstName: "Johnn",
+			LastName:  "Doee",
+			Email:     "johndoe2@gmail.com",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "POST")
+
+	c.Request.Header.Set("Authorization", "token_1")
+
+	authorization.AuthManager.(*authorization_mock.AuthorizationMock).Authorized = false
+
+	Update(c)
+
+	authorization.AuthManager.(*authorization_mock.AuthorizationMock).Authorized = true
+
+	c.Request.Header.Del("Authorization")
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse rest_errors.RestErr
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.EqualValues(t, http.StatusUnauthorized, w.Code)
+	assert.EqualValues(t, http.StatusUnauthorized, receivedResponse.Status)
+	assert.EqualValues(t, "Invalid JWT token", receivedResponse.Message)
+	assert.EqualValues(t, "unauthorized", receivedResponse.Err)
+}
+
+func TestUpdateWrongTokenID(t *testing.T) {
+	exampleJsonReq, err := json.Marshal(
+		users.User{
+			FirstName: "Johnn",
+			LastName:  "Doee",
+			Email:     "johndoe2@gmail.com",
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	w := PrepareTest(exampleJsonReq, "POST")
+
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+
+	authorization.AuthManager.(*authorization_mock.AuthorizationMock).WrongID = true
+
+	Update(c)
+
+	authorization.AuthManager.(*authorization_mock.AuthorizationMock).WrongID = false
+
+	c.Params = make([]gin.Param, 0)
+
+	responseData, _ := ioutil.ReadAll(w.Body)
+
+	var receivedResponse rest_errors.RestErr
+	err = json.Unmarshal(responseData, &receivedResponse)
+
+	assert.Nil(t, err)
+	assert.EqualValues(t, http.StatusUnauthorized, w.Code)
+	assert.EqualValues(t, http.StatusUnauthorized, receivedResponse.Status)
+	assert.EqualValues(t, "User ID in the request does not match token user ID", receivedResponse.Message)
+	assert.EqualValues(t, "unauthorized", receivedResponse.Err)
+}
+
 func TestUpdateInvalidJSONBody(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(`{"invalid_key": "true"}`)
 	if err != nil {
@@ -391,11 +472,13 @@ func TestUpdateInvalidJSONBody(t *testing.T) {
 
 	w := PrepareTest(exampleJsonReq, "POST")
 
-	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "2"})
+	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+	c.Request.Header.Set("Authorization", "token_1")
 
 	Update(c)
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -424,10 +507,12 @@ func TestUpdateSaveError(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "POST")
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "2"})
+	c.Request.Header.Set("Authorization", "token_2")
 
 	Update(c)
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -456,10 +541,12 @@ func TestDeleteSuccess(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "DELETE")
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+	c.Request.Header.Set("Authorization", "token_1")
 
 	Delete(c)
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -481,10 +568,12 @@ func TestDeleteInvalidUserID(t *testing.T) {
 	}
 
 	w := PrepareTest(exampleJsonReq, "Delete")
+	c.Request.Header.Set("Authorization", "token_1")
 
 	Delete(c)
 
 	responseData, _ := ioutil.ReadAll(w.Body)
+	c.Request.Header.Del("Authorization")
 
 	var receivedResponse rest_errors.RestErr
 	err = json.Unmarshal(responseData, &receivedResponse)
@@ -505,10 +594,12 @@ func TestDeleteInvalidJSONBody(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "DELETE")
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+	c.Request.Header.Set("Authorization", "token_1")
 
 	Delete(c)
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -536,10 +627,12 @@ func TestDeleteDeleteError(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "DELETE")
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "2"})
+	c.Request.Header.Set("Authorization", "token_2")
 
 	Delete(c)
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -702,10 +795,12 @@ func TestAddUserFavoritesSuccessMovieCached(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "POST")
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+	c.Request.Header.Set("Authorization", "token_1")
 
 	AddUserFavorite(c)
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -733,6 +828,7 @@ func TestAddUserFavoritesSuccessMovieNotCached(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "POST")
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+	c.Request.Header.Set("Authorization", "token_1")
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = false
 
@@ -741,6 +837,7 @@ func TestAddUserFavoritesSuccessMovieNotCached(t *testing.T) {
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = true
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -767,7 +864,11 @@ func TestAddUserFavoritesInvalidUserID(t *testing.T) {
 
 	w := PrepareTest(exampleJsonReq, "POST")
 
+	c.Request.Header.Set("Authorization", "token_1")
+
 	AddUserFavorite(c)
+
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -790,10 +891,12 @@ func TestAddUserFavoritesInvalidJSONBody(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "POST")
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+	c.Request.Header.Set("Authorization", "token_1")
 
 	AddUserFavorite(c)
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -824,6 +927,7 @@ func TestAddUserFavoritesGetMovieError(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "POST")
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+	c.Request.Header.Set("Authorization", "token_1")
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanGetMovie = false
 
@@ -832,6 +936,7 @@ func TestAddUserFavoritesGetMovieError(t *testing.T) {
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanGetMovie = true
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -862,6 +967,7 @@ func TestAddUserFavoritesAddMovieErrorWhenNotCached(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "POST")
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+	c.Request.Header.Set("Authorization", "token_1")
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = false
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanAddMovie = false
@@ -872,6 +978,7 @@ func TestAddUserFavoritesAddMovieErrorWhenNotCached(t *testing.T) {
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanAddMovie = true
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -902,6 +1009,7 @@ func TestAddUserFavoritesAddUserFavoriteError(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "POST")
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
+	c.Request.Header.Set("Authorization", "token_1")
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanAddFavorite = false
 
@@ -910,6 +1018,7 @@ func TestAddUserFavoritesAddUserFavoriteError(t *testing.T) {
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanAddFavorite = false
 
 	c.Params = make([]gin.Param, 0)
+	c.Request.Header.Del("Authorization")
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
