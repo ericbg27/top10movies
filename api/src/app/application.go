@@ -23,8 +23,6 @@ func StartApplication() {
 	db.SetupDbConnection()
 	defer db.Client.Conn().Close(context.Background())
 
-	go db.ClearMoviesCache()
-
 	redisdb.SetupRedisConnection()
 
 	cfg := config.GetConfig()

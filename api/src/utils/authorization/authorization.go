@@ -111,7 +111,7 @@ func (a AuthorizationManager) saveTokenMetadata(userId int64, tokenInfo *TokenDe
 func (a AuthorizationManager) extractToken(bearToken string) string {
 	bearTokenArgs := strings.Split(bearToken, " ")
 	if len(bearTokenArgs) == 2 {
-		return bearTokenArgs[2]
+		return bearTokenArgs[1]
 	}
 
 	return ""

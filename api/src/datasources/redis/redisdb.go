@@ -13,7 +13,8 @@ const (
 )
 
 var (
-	Client *redis.Client
+	Client   *redis.Client
+	RedisNil = redis.Nil
 )
 
 func SetupRedisConnection() {

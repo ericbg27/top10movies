@@ -2,10 +2,13 @@ package user_favorites
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"time"
+	"strconv"
+	"strings"
 
 	"github.com/ericbg27/top10movies-api/src/datasources/postgresql/db"
+	redisdb "github.com/ericbg27/top10movies-api/src/datasources/redis"
 	"github.com/ericbg27/top10movies-api/src/domain/movies"
 	user_favorites_queries "github.com/ericbg27/top10movies-api/src/queries/user_favorites"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
@@ -32,31 +35,30 @@ func (u UserFavorites) GetFavorites() (UserFavoritesInterface, map[int]bool, *re
 		userFavorites.MoviesIDs = append(userFavorites.MoviesIDs, movieId)
 	}
 
-	result, err = db.Client.Query(context.Background(), user_favorites_queries.QueryGetUserCachedFavorites, u.UserID)
-	if err != nil { // Do we throw an error here? Maybe just log!
-		logger.Error("Error when trying to get user favorites", err)
-		return nil, nil, rest_errors.NewInternalServerError("Error when trying to get user favorites")
-	}
-
 	cachedIds := make(map[int]bool)
 
-	for result.Next() {
-		var cachedFavorite movies.MovieInfo
-		var releaseDate time.Time
-		var createdAt time.Time
+	for _, movieId := range userFavorites.MoviesIDs {
+		var movieRedisKey strings.Builder
+		movieRedisKey.WriteString("movie:")
+		movieRedisKey.WriteString(strconv.Itoa(movieId))
 
-		err := result.Scan(&cachedFavorite.Movie.ID, &cachedFavorite.Movie.OriginalTitle, &cachedFavorite.Movie.Adult,
-			&releaseDate, &createdAt, &cachedFavorite.Movie.Title, &cachedFavorite.Movie.Overview)
-		if err != nil {
-			logger.Error("Error when trying to get cached user favorites", err)
+		redisResult, redisErr := redisdb.Client.Get(movieRedisKey.String()).Result()
+		if redisErr != nil && redisErr != redisdb.RedisNil { // Do we throw an error here? Maybe just log!
+			logger.Error("Error when trying to get user favorites", redisErr)
 			return nil, nil, rest_errors.NewInternalServerError("Error when trying to get user favorites")
 		}
 
-		cachedFavorite.Movie.ReleaseDate = releaseDate.Format(user_favorites_queries.ReleaseDateLayout)
-		cachedFavorite.CreatedAt = createdAt.Format(user_favorites_queries.CreatedAtLayout)
+		if redisErr != redisdb.RedisNil {
+			var cachedFavorite movies.MovieInfo
+			err = json.Unmarshal([]byte(redisResult), &cachedFavorite)
+			if err != nil {
+				logger.Error("Error when trying to get user favorites", err)
+				return nil, nil, rest_errors.NewInternalServerError("Error when trying to get user favorites")
+			}
 
-		cachedIds[cachedFavorite.Movie.ID] = true
-		userFavorites.MoviesData = append(userFavorites.MoviesData, cachedFavorite.Movie)
+			cachedIds[movieId] = true
+			userFavorites.MoviesData = append(userFavorites.MoviesData, cachedFavorite.Movie)
+		}
 	}
 
 	return userFavorites, cachedIds, nil
