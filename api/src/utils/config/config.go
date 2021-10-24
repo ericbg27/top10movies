@@ -23,7 +23,10 @@ type DatabaseCfg struct {
 	Password string `mapstructure:"password"`
 	DbName   string `mapstructure:"dbname"`
 	LogLevel string `mapstructure:"log_level"`
-	CacheTtl int64  `mapstructure:"cache_ttl"`
+}
+
+type RedisCfg struct {
+	CacheTtl int64 `mapstructure:"cache_ttl"`
 }
 
 type MovieApiCfg struct {
@@ -34,6 +37,7 @@ type Config struct {
 	Server   ServerCfg   `mapstructure:"server"`
 	Logger   LoggerCfg   `mapstructure:"logger"`
 	Database DatabaseCfg `mapstructure:"database"`
+	Redis    RedisCfg    `mapstructure:"redis"`
 	MovieApi MovieApiCfg `mapstructure:"movieapi"`
 }
 
@@ -53,6 +57,10 @@ func init() {
 	cfg, err = setupConfig(configName, configType, configPath)
 	if err != nil {
 		panic(fmt.Errorf("fatal error in configuration file: %s", err))
+	}
+
+	if cfg.Redis.CacheTtl == 0 {
+		cfg.Redis.CacheTtl = 10
 	}
 }
 

@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	cachettl = config.GetConfig().Database.CacheTtl
+	cachettl = config.GetConfig().Redis.CacheTtl
 )
 
 func (m MovieInfo) AddMovie() *rest_errors.RestErr {
