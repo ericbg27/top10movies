@@ -62,3 +62,11 @@ func TestNewInternalServerError(t *testing.T) {
 	assert.EqualValues(t, http.StatusInternalServerError, internalServerErr.Status)
 	assert.EqualValues(t, internalServerErrorString, internalServerErr.Err)
 }
+
+func TestNewUnauthorizedError(t *testing.T) {
+	unauthorizedErr := NewUnauthorizedError("Unauthorized")
+
+	assert.EqualValues(t, "Unauthorized", unauthorizedErr.Message)
+	assert.EqualValues(t, http.StatusUnauthorized, unauthorizedErr.Status)
+	assert.EqualValues(t, unauthorizedString, unauthorizedErr.Err)
+}

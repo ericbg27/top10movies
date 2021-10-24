@@ -10,6 +10,7 @@ import (
 	"github.com/ericbg27/top10movies-api/src/domain/users"
 	movies_service "github.com/ericbg27/top10movies-api/src/services/movies"
 	users_service "github.com/ericbg27/top10movies-api/src/services/users"
+	"github.com/ericbg27/top10movies-api/src/utils/authorization"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 	"github.com/gin-gonic/gin"
@@ -55,8 +56,20 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// TODO: Create a token and send to the user
-	c.JSON(http.StatusOK, nil)
+	token, err := authorization.AuthManager.CreateToken(savedUser.ID)
+	if err != nil {
+		tokenErr := rest_errors.NewInternalServerError("Could not generate jwt access token")
+		c.JSON(tokenErr.Status, tokenErr)
+
+		return
+	}
+
+	tokensInfo := map[string]string{
+		"access_token":  token.AccessToken,
+		"refresh_token": token.RefreshToken,
+	}
+
+	c.JSON(http.StatusOK, tokensInfo)
 }
 
 func Create(c *gin.Context) {
@@ -97,9 +110,26 @@ func Create(c *gin.Context) {
 }
 
 func Update(c *gin.Context) {
-	userID, IdErr := getID(c.Param("user_id"))
+	bearToken := c.Request.Header.Get("Authorization")
+
+	userID, err := authorization.AuthManager.FetchAuth(bearToken)
+	if err != nil {
+		authErr := rest_errors.NewUnauthorizedError("Invalid JWT token")
+		c.JSON(authErr.Status, authErr)
+
+		return
+	}
+
+	requestUserID, IdErr := getID(c.Param("user_id"))
 	if IdErr != nil {
 		c.JSON(IdErr.Status, IdErr)
+
+		return
+	}
+
+	if requestUserID != int64(userID) {
+		wrongIdErr := rest_errors.NewUnauthorizedError("User ID in the request does not match token user ID")
+		c.JSON(wrongIdErr.Status, wrongIdErr)
 
 		return
 	}
@@ -112,7 +142,7 @@ func Update(c *gin.Context) {
 		return
 	}
 
-	user.ID = userID
+	user.ID = int64(userID)
 
 	isPartial := c.Request.Method == http.MethodPatch
 
@@ -130,9 +160,26 @@ func Update(c *gin.Context) {
 }
 
 func Delete(c *gin.Context) {
-	userID, IdErr := getID(c.Param("user_id"))
+	bearToken := c.Request.Header.Get("Authorization")
+
+	userID, err := authorization.AuthManager.FetchAuth(bearToken)
+	if err != nil {
+		authErr := rest_errors.NewUnauthorizedError("Invalid JWT token")
+		c.JSON(authErr.Status, authErr)
+
+		return
+	}
+
+	requestUserID, IdErr := getID(c.Param("user_id"))
 	if IdErr != nil {
 		c.JSON(IdErr.Status, IdErr)
+
+		return
+	}
+
+	if requestUserID != int64(userID) {
+		wrongIdErr := rest_errors.NewUnauthorizedError("User ID in the request does not match token user ID")
+		c.JSON(wrongIdErr.Status, wrongIdErr)
 
 		return
 	}
@@ -145,7 +192,7 @@ func Delete(c *gin.Context) {
 		return
 	}
 
-	user.ID = userID
+	user.ID = int64(userID)
 
 	deleteErr := users_service.UsersService.DeleteUser(user)
 	if deleteErr != nil {
@@ -205,9 +252,26 @@ func GetUserFavorites(c *gin.Context) {
 }
 
 func AddUserFavorite(c *gin.Context) {
-	userID, userIdErr := getID(c.Param("user_id"))
-	if userIdErr != nil {
-		c.JSON(userIdErr.Status, userIdErr)
+	bearToken := c.Request.Header.Get("Authorization")
+
+	userID, err := authorization.AuthManager.FetchAuth(bearToken)
+	if err != nil {
+		authErr := rest_errors.NewUnauthorizedError("Invalid JWT token")
+		c.JSON(authErr.Status, authErr)
+
+		return
+	}
+
+	requestUserID, IdErr := getID(c.Param("user_id"))
+	if IdErr != nil {
+		c.JSON(IdErr.Status, IdErr)
+
+		return
+	}
+
+	if requestUserID != int64(userID) {
+		wrongIdErr := rest_errors.NewUnauthorizedError("User ID in the request does not match token user ID")
+		c.JSON(wrongIdErr.Status, wrongIdErr)
 
 		return
 	}
@@ -221,9 +285,9 @@ func AddUserFavorite(c *gin.Context) {
 		return
 	}
 
-	movieCacheResult, err := movies_service.MoviesService.GetMovieFromCache(movie)
-	if err != nil {
-		c.JSON(err.Status, err)
+	movieCacheResult, cacheErr := movies_service.MoviesService.GetMovieFromCache(movie)
+	if cacheErr != nil {
+		c.JSON(cacheErr.Status, cacheErr)
 
 		return
 	}
@@ -239,7 +303,7 @@ func AddUserFavorite(c *gin.Context) {
 	}
 
 	var userFavorite user_favorites.UserFavorites
-	userFavorite.UserID = userID
+	userFavorite.UserID = int64(userID)
 	userFavorite.MoviesIDs = append(userFavorite.MoviesIDs, movie.Movie.ID)
 
 	addErr := users_service.UsersService.AddUserFavorite(userFavorite)
