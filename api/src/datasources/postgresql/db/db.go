@@ -4,16 +4,11 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/ericbg27/top10movies-api/src/utils/config"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-)
-
-const (
-	deleteCacheQuery = "DELETE FROM movies AS m1 WHERE EXTRACT(EPOCH FROM (NOW() - m1.created_at)) >= $1;"
 )
 
 var (
@@ -25,7 +20,6 @@ var (
 	password = config.GetConfig().Database.Password
 	dbname   = config.GetConfig().Database.DbName
 	loglevel = config.GetConfig().Database.LogLevel
-	cachettl = config.GetConfig().Database.CacheTtl
 )
 
 // TODO: Create DB class for DAO testing
@@ -55,19 +49,5 @@ func SetupDbConnection() {
 	if err != nil {
 		logger.Error("Unable to acquire connection to database", err)
 		panic(err)
-	}
-}
-
-func ClearMoviesCache() {
-	clearCacheTicker := time.NewTicker(time.Duration(cachettl) * time.Minute)
-
-	for {
-		<-clearCacheTicker.C
-
-		logger.Info("Clearing movies cache")
-
-		cachettlSeconds := cachettl * 60
-
-		Client.Exec(context.Background(), deleteCacheQuery, cachettlSeconds)
 	}
 }
