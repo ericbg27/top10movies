@@ -95,3 +95,26 @@ func (user User) Delete() *rest_errors.RestErr {
 
 	return nil
 }
+
+func (user User) Search() ([]UserInterface, *rest_errors.RestErr) {
+	result, err := db.Client.Query(context.Background(), user_queries.QuerySearchUser, user.FirstName, user.LastName)
+	if err != nil {
+		logger.Error("Error when trying to search user in database", err)
+		return nil, rest_errors.NewInternalServerError("Error when trying to search user")
+	}
+
+	var foundUsers []UserInterface
+	for result.Next() {
+		var searchedUser User
+
+		err = result.Scan(&searchedUser.ID, &searchedUser.FirstName, &searchedUser.LastName, &searchedUser.Email)
+		if err != nil {
+			logger.Error("Error when trying to search user in database", err)
+			return nil, rest_errors.NewInternalServerError("Error when trying to search user")
+		}
+
+		foundUsers = append(foundUsers, searchedUser)
+	}
+
+	return foundUsers, nil
+}

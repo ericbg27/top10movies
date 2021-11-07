@@ -646,7 +646,7 @@ func TestDeleteDeleteError(t *testing.T) {
 	assert.EqualValues(t, "internal_server_error", receivedResponse.Err)
 }
 
-func TestGetUserFavoritesSuccessCached(t *testing.T) {
+func TestGetFavoritesSuccessCached(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(
 		user_favorites.UserFavorites{
 			UserID:    1,
@@ -661,7 +661,7 @@ func TestGetUserFavoritesSuccessCached(t *testing.T) {
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 
-	GetUserFavorites(c)
+	GetFavorites(c)
 
 	c.Params = make([]gin.Param, 0)
 
@@ -677,7 +677,7 @@ func TestGetUserFavoritesSuccessCached(t *testing.T) {
 	assert.EqualValues(t, 1, receivedResponse.MoviesData[0].ID)
 }
 
-func TestGetUserFavoritesSuccessNotCached(t *testing.T) {
+func TestGetFavoritesSuccessNotCached(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(
 		user_favorites.UserFavorites{
 			UserID:    1,
@@ -694,7 +694,7 @@ func TestGetUserFavoritesSuccessNotCached(t *testing.T) {
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).FavoriteCached = false
 
-	GetUserFavorites(c)
+	GetFavorites(c)
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).FavoriteCached = true
 
@@ -715,7 +715,7 @@ func TestGetUserFavoritesSuccessNotCached(t *testing.T) {
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).AddedMovie = false
 }
 
-func TestGetUserFavoritesInvalidUserID(t *testing.T) {
+func TestGetFavoritesInvalidUserID(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(
 		user_favorites.UserFavorites{
 			UserID:    1,
@@ -728,7 +728,7 @@ func TestGetUserFavoritesInvalidUserID(t *testing.T) {
 
 	w := PrepareTest(exampleJsonReq, "GET")
 
-	GetUserFavorites(c)
+	GetFavorites(c)
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -742,7 +742,7 @@ func TestGetUserFavoritesInvalidUserID(t *testing.T) {
 	assert.EqualValues(t, http.StatusBadRequest, receivedResponse.Status)
 }
 
-func TestGetUserFavoritesFailure(t *testing.T) {
+func TestGetFavoritesFailure(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(
 		user_favorites.UserFavorites{
 			UserID:    1,
@@ -759,7 +759,7 @@ func TestGetUserFavoritesFailure(t *testing.T) {
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanGetFavorites = false
 
-	GetUserFavorites(c)
+	GetFavorites(c)
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanGetFavorites = true
 
@@ -778,7 +778,7 @@ func TestGetUserFavoritesFailure(t *testing.T) {
 	assert.EqualValues(t, "internal_server_error", receivedResponse.Err)
 }
 
-func TestAddUserFavoritesSuccessMovieCached(t *testing.T) {
+func TestAddFavoritesSuccessMovieCached(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(
 		movies.MovieInfo{
 			Movie: tmdb.Movie{
@@ -797,7 +797,7 @@ func TestAddUserFavoritesSuccessMovieCached(t *testing.T) {
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 	c.Request.Header.Set("Authorization", "token_1")
 
-	AddUserFavorite(c)
+	AddFavorite(c)
 
 	c.Params = make([]gin.Param, 0)
 	c.Request.Header.Del("Authorization")
@@ -811,7 +811,7 @@ func TestAddUserFavoritesSuccessMovieCached(t *testing.T) {
 	assert.EqualValues(t, false, movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).AddedMovie)
 }
 
-func TestAddUserFavoritesSuccessMovieNotCached(t *testing.T) {
+func TestAddFavoritesSuccessMovieNotCached(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(
 		movies.MovieInfo{
 			Movie: tmdb.Movie{
@@ -832,7 +832,7 @@ func TestAddUserFavoritesSuccessMovieNotCached(t *testing.T) {
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = false
 
-	AddUserFavorite(c)
+	AddFavorite(c)
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = true
 
@@ -848,7 +848,7 @@ func TestAddUserFavoritesSuccessMovieNotCached(t *testing.T) {
 	assert.EqualValues(t, true, movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).AddedMovie)
 }
 
-func TestAddUserFavoritesInvalidUserID(t *testing.T) {
+func TestAddFavoritesInvalidUserID(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(
 		movies.MovieInfo{
 			Movie: tmdb.Movie{
@@ -866,7 +866,7 @@ func TestAddUserFavoritesInvalidUserID(t *testing.T) {
 
 	c.Request.Header.Set("Authorization", "token_1")
 
-	AddUserFavorite(c)
+	AddFavorite(c)
 
 	c.Request.Header.Del("Authorization")
 
@@ -882,7 +882,7 @@ func TestAddUserFavoritesInvalidUserID(t *testing.T) {
 	assert.EqualValues(t, http.StatusBadRequest, receivedResponse.Status)
 }
 
-func TestAddUserFavoritesInvalidJSONBody(t *testing.T) {
+func TestAddFavoritesInvalidJSONBody(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(`{"invalid_key": "true"}`)
 	if err != nil {
 		panic(err)
@@ -893,7 +893,7 @@ func TestAddUserFavoritesInvalidJSONBody(t *testing.T) {
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 	c.Request.Header.Set("Authorization", "token_1")
 
-	AddUserFavorite(c)
+	AddFavorite(c)
 
 	c.Params = make([]gin.Param, 0)
 	c.Request.Header.Del("Authorization")
@@ -910,7 +910,7 @@ func TestAddUserFavoritesInvalidJSONBody(t *testing.T) {
 	assert.EqualValues(t, http.StatusBadRequest, receivedResponse.Status)
 }
 
-func TestAddUserFavoritesGetMovieError(t *testing.T) {
+func TestAddFavoritesGetMovieError(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(
 		movies.MovieInfo{
 			Movie: tmdb.Movie{
@@ -931,7 +931,7 @@ func TestAddUserFavoritesGetMovieError(t *testing.T) {
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanGetMovie = false
 
-	AddUserFavorite(c)
+	AddFavorite(c)
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanGetMovie = true
 
@@ -950,7 +950,7 @@ func TestAddUserFavoritesGetMovieError(t *testing.T) {
 	assert.EqualValues(t, http.StatusInternalServerError, receivedResponse.Status)
 }
 
-func TestAddUserFavoritesAddMovieErrorWhenNotCached(t *testing.T) {
+func TestAddFavoritesAddMovieErrorWhenNotCached(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(
 		movies.MovieInfo{
 			Movie: tmdb.Movie{
@@ -972,7 +972,7 @@ func TestAddUserFavoritesAddMovieErrorWhenNotCached(t *testing.T) {
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = false
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanAddMovie = false
 
-	AddUserFavorite(c)
+	AddFavorite(c)
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = true
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanAddMovie = true
@@ -992,7 +992,7 @@ func TestAddUserFavoritesAddMovieErrorWhenNotCached(t *testing.T) {
 	assert.EqualValues(t, http.StatusInternalServerError, receivedResponse.Status)
 }
 
-func TestAddUserFavoritesAddUserFavoriteError(t *testing.T) {
+func TestAddFavoritesAddFavoriteError(t *testing.T) {
 	exampleJsonReq, err := json.Marshal(
 		movies.MovieInfo{
 			Movie: tmdb.Movie{
@@ -1013,7 +1013,7 @@ func TestAddUserFavoritesAddUserFavoriteError(t *testing.T) {
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanAddFavorite = false
 
-	AddUserFavorite(c)
+	AddFavorite(c)
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanAddFavorite = false
 

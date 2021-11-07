@@ -11,9 +11,10 @@ func mapUrls() {
 	router.POST("/users/:user_id", users.Update)
 	router.PATCH("/users/:user_id", users.Update)
 	router.DELETE("/users/:user_id", users.Delete)
+	router.GET("/users/search", users.Search)
 
-	router.GET("/users/:user_id/favorites", users.GetUserFavorites)
-	router.POST("/users/:user_id/favorite", users.AddUserFavorite) // TODO: Do we put movie_id in the URL?
+	router.GET("/users/:user_id/favorites", users.GetFavorites)
+	router.POST("/users/:user_id/favorite", users.AddFavorite) // TODO: Do we put movie_id in the URL?
 
 	router.GET("/search", movies.Search)
 }

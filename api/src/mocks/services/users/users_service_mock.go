@@ -107,3 +107,8 @@ func (u *UsersServiceMock) AddUserFavorite(userFavs user_favorites.UserFavorites
 
 	return nil
 }
+
+func (u *UsersServiceMock) SearchUser(userToSearch users.UserInterface) ([]users.UserInterface, *rest_errors.RestErr) {
+	// TODO
+	return nil, nil
+}
