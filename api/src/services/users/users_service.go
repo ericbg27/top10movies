@@ -15,7 +15,12 @@ type usersServiceInterface interface {
 	DeleteUser(users.UserInterface) *rest_errors.RestErr
 	GetUserFavorites(user_favorites.UserFavoritesInterface) (user_favorites.UserFavoritesInterface, map[int]bool, *rest_errors.RestErr)
 	AddUserFavorite(user_favorites.UserFavoritesInterface) *rest_errors.RestErr
+	SearchUser(users.UserInterface) ([]users.UserInterface, *rest_errors.RestErr)
 }
+
+const (
+	QueryParam = "query"
+)
 
 var (
 	UsersService usersServiceInterface = &usersService{}
@@ -96,4 +101,13 @@ func (s *usersService) AddUserFavorite(userFavorites user_favorites.UserFavorite
 	}
 
 	return nil
+}
+
+func (s *usersService) SearchUser(userToSearch users.UserInterface) ([]users.UserInterface, *rest_errors.RestErr) {
+	usersFound, searchErr := userToSearch.Search()
+	if searchErr != nil {
+		return nil, searchErr
+	}
+
+	return usersFound, nil
 }

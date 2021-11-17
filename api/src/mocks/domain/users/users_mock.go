@@ -100,3 +100,8 @@ func (u UserMock) Delete() *rest_errors.RestErr {
 
 	return nil
 }
+
+func (u UserMock) Search() ([]users.UserInterface, *rest_errors.RestErr) {
+	// TODO
+	return nil, nil
+}

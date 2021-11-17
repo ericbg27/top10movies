@@ -3,6 +3,7 @@ package users
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ericbg27/top10movies-api/src/domain/movies"
@@ -204,7 +205,7 @@ func Delete(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func GetUserFavorites(c *gin.Context) {
+func GetFavorites(c *gin.Context) {
 	userID, IdErr := getID(c.Param("user_id"))
 	if IdErr != nil {
 		c.JSON(IdErr.Status, IdErr)
@@ -251,7 +252,7 @@ func GetUserFavorites(c *gin.Context) {
 	c.JSON(http.StatusOK, usrFav)
 }
 
-func AddUserFavorite(c *gin.Context) {
+func AddFavorite(c *gin.Context) {
 	bearToken := c.Request.Header.Get("Authorization")
 
 	userID, err := authorization.AuthManager.FetchAuth(bearToken)
@@ -314,4 +315,29 @@ func AddUserFavorite(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+func Search(c *gin.Context) {
+	queryParams := make(map[string]string)
+
+	for queryKey, queryVal := range c.Request.URL.Query() {
+		queryParams[queryKey] = queryVal[0]
+	}
+
+	queryParams[users_service.QueryParam] = strings.ReplaceAll(queryParams[users_service.QueryParam], "+", " ")
+
+	queryArray := strings.Split(queryParams[users_service.QueryParam], " ")
+
+	var userToSearch users.User
+	userToSearch.FirstName = queryArray[0]
+	userToSearch.LastName = strings.Join(queryArray[1:], " ")
+
+	foundUsers, searchErr := users_service.UsersService.SearchUser(userToSearch)
+	if searchErr != nil {
+		c.JSON(searchErr.Status, searchErr)
+
+		return
+	}
+
+	c.JSON(http.StatusOK, foundUsers)
 }
