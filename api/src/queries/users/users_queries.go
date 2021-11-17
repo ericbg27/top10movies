@@ -16,6 +16,6 @@ const (
 	QueryDeleteUser     = "DELETE FROM users WHERE id=$1;"
 	QueryDeleteUserName = "delete-user-query"
 
-	QuerySearchUser     = "SELECT id, first_name, last_name, email FROM users WHERE first_name ILIKE $1 OR last_name ILIKE $2;"
+	QuerySearchUser     = "SELECT id, first_name, last_name, email FROM users WHERE first_name ILIKE '' || $1 || '%' AND last_name ILIKE '%' || $2 || '%';"
 	QuerySearchUserName = "search-user-query"
 )
