@@ -7,8 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/ericbg27/top10movies-api/src/datasources/postgresql/db"
+	"github.com/ericbg27/top10movies-api/src/datasources/database"
+	postgresdb "github.com/ericbg27/top10movies-api/src/datasources/postgresql/db"
 	redisdb "github.com/ericbg27/top10movies-api/src/datasources/redis"
+	users_service "github.com/ericbg27/top10movies-api/src/services/users"
 	"github.com/ericbg27/top10movies-api/src/utils/config"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
 )
@@ -18,10 +20,17 @@ var (
 )
 
 func StartApplication() {
-	mapUrls()
+	var db database.DatabaseClient
+	db = &postgresdb.PostgresDBClient{
+		Client: nil,
+	}
 
 	db.SetupDbConnection()
-	defer db.Client.Conn().Close(context.Background())
+	defer db.CloseDbConnection(context.Background())
+
+	users_service.UsersService.SetupDBClient(db)
+
+	mapUrls()
 
 	redisdb.SetupRedisConnection()
 

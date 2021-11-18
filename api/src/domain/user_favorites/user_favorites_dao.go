@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ericbg27/top10movies-api/src/datasources/postgresql/db"
+	"github.com/ericbg27/top10movies-api/src/datasources/database"
 	redisdb "github.com/ericbg27/top10movies-api/src/datasources/redis"
 	"github.com/ericbg27/top10movies-api/src/domain/movies"
 	user_favorites_queries "github.com/ericbg27/top10movies-api/src/queries/user_favorites"
@@ -15,8 +15,8 @@ import (
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 )
 
-func (u UserFavorites) GetFavorites() (UserFavoritesInterface, map[int]bool, *rest_errors.RestErr) {
-	result, err := db.Client.Query(context.Background(), user_favorites_queries.QueryGetUserFavoritesIds, u.UserID)
+func (u UserFavorites) GetFavorites(db database.DatabaseClient) (UserFavoritesInterface, map[int]bool, *rest_errors.RestErr) {
+	result, err := db.Query(context.Background(), user_favorites_queries.QueryGetUserFavoritesIds, u.UserID)
 	if err != nil {
 		logger.Error("Error when trying to get user favorites", err)
 		return nil, nil, rest_errors.NewInternalServerError("Error when trying to get user favorites")
@@ -64,8 +64,8 @@ func (u UserFavorites) GetFavorites() (UserFavoritesInterface, map[int]bool, *re
 	return userFavorites, cachedIds, nil
 }
 
-func (u UserFavorites) AddFavorite() *rest_errors.RestErr {
-	result, err := db.Client.Exec(context.Background(), user_favorites_queries.QueryAddUserFavorite, u.UserID, u.MoviesIDs[0])
+func (u UserFavorites) AddFavorite(db database.DatabaseClient) *rest_errors.RestErr {
+	result, err := db.Exec(context.Background(), user_favorites_queries.QueryAddUserFavorite, u.UserID, u.MoviesIDs[0])
 	if err != nil {
 		logger.Error("Error when trying to prepare add user favorite statement", err)
 		return rest_errors.NewBadRequestError("Error when trying to add user favorite")
