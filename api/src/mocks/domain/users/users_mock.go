@@ -1,6 +1,7 @@
 package users
 
 import (
+	"github.com/ericbg27/top10movies-api/src/datasources/database"
 	"github.com/ericbg27/top10movies-api/src/domain/users"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 )
@@ -16,6 +17,8 @@ type UserMock struct {
 	Email     string
 }
 
+// TODO: Is it a good idea for UserMock functions to user database mock structures? The input is already required
+
 func (u UserMock) Validate() (users.UserInterface, *rest_errors.RestErr) {
 	validatedUser := u
 
@@ -26,7 +29,7 @@ func (u UserMock) Validate() (users.UserInterface, *rest_errors.RestErr) {
 	return validatedUser, nil
 }
 
-func (u UserMock) Get() (users.UserInterface, *rest_errors.RestErr) {
+func (u UserMock) Get(db database.DatabaseClient) (users.UserInterface, *rest_errors.RestErr) {
 	savedUser := u
 
 	if !savedUser.CanGet {
@@ -38,7 +41,7 @@ func (u UserMock) Get() (users.UserInterface, *rest_errors.RestErr) {
 	return savedUser, nil
 }
 
-func (u UserMock) GetById() (users.UserInterface, *rest_errors.RestErr) {
+func (u UserMock) GetById(db database.DatabaseClient) (users.UserInterface, *rest_errors.RestErr) {
 	savedUser := u
 
 	if !savedUser.CanGet {
@@ -52,7 +55,7 @@ func (u UserMock) GetById() (users.UserInterface, *rest_errors.RestErr) {
 	return savedUser, nil
 }
 
-func (u UserMock) Save() *rest_errors.RestErr {
+func (u UserMock) Save(db database.DatabaseClient) *rest_errors.RestErr {
 	if !u.CanSave {
 		return rest_errors.NewInternalServerError("Failed to save user")
 	}
@@ -60,7 +63,7 @@ func (u UserMock) Save() *rest_errors.RestErr {
 	return nil
 }
 
-func (u UserMock) Update(newUser users.UserInterface, isPartial bool) (users.UserInterface, *rest_errors.RestErr) {
+func (u UserMock) Update(newUser users.UserInterface, isPartial bool, db database.DatabaseClient) (users.UserInterface, *rest_errors.RestErr) {
 	var validatedNewUser users.UserInterface
 	var err *rest_errors.RestErr
 
@@ -93,7 +96,7 @@ func (u UserMock) Update(newUser users.UserInterface, isPartial bool) (users.Use
 	return u, nil
 }
 
-func (u UserMock) Delete() *rest_errors.RestErr {
+func (u UserMock) Delete(db database.DatabaseClient) *rest_errors.RestErr {
 	if !u.CanDelete {
 		return rest_errors.NewInternalServerError("Failed to delete user")
 	}
@@ -101,7 +104,7 @@ func (u UserMock) Delete() *rest_errors.RestErr {
 	return nil
 }
 
-func (u UserMock) Search() ([]users.UserInterface, *rest_errors.RestErr) {
+func (u UserMock) Search(db database.DatabaseClient) ([]users.UserInterface, *rest_errors.RestErr) {
 	// TODO
 	return nil, nil
 }
