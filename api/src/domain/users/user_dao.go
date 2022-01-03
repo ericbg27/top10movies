@@ -19,7 +19,7 @@ func (user User) Get(db database.DatabaseClient) (UserInterface, *rest_errors.Re
 		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
 	}
 
-	err = result.Scan(&savedUser.ID, &savedUser.FirstName, &savedUser.Status, &savedUser.Password)
+	err = result.Scan(&savedUser.ID, &savedUser.FirstName, &savedUser.LastName, &savedUser.Email, &savedUser.Status, &savedUser.Password)
 	if err != nil {
 		logger.Error("Error when trying to get user in database", err)
 		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
@@ -37,7 +37,7 @@ func (user User) GetById(db database.DatabaseClient) (UserInterface, *rest_error
 		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
 	}
 
-	err = result.Scan(&savedUser.FirstName, &savedUser.LastName, &savedUser.Email, &savedUser.Status, &savedUser.Password)
+	err = result.Scan(&savedUser.ID, &savedUser.FirstName, &savedUser.LastName, &savedUser.Email, &savedUser.Status, &savedUser.Password)
 	if err != nil {
 		logger.Error("Error when trying to get user by id in database", err)
 		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
@@ -117,11 +117,13 @@ func (user User) Search(db database.DatabaseClient) ([]UserInterface, *rest_erro
 	for result.Next() {
 		var searchedUser User
 
-		err = result.Scan(&searchedUser.ID, &searchedUser.FirstName, &searchedUser.LastName, &searchedUser.Email)
+		err = result.Scan(&searchedUser.ID, &searchedUser.FirstName, &searchedUser.LastName, &searchedUser.Email, &searchedUser.Status, &searchedUser.Password)
 		if err != nil {
 			logger.Error("Error when trying to search user in database", err)
 			return nil, rest_errors.NewInternalServerError("Error when trying to search user")
 		}
+
+		searchedUser.Password = ""
 
 		foundUsers = append(foundUsers, searchedUser)
 	}
