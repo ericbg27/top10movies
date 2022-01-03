@@ -17,8 +17,6 @@ type UserMock struct {
 	Email     string
 }
 
-// TODO: Is it a good idea for UserMock functions to user database mock structures? The input is already required
-
 func (u UserMock) Validate() (users.UserInterface, *rest_errors.RestErr) {
 	validatedUser := u
 
