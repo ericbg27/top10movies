@@ -6,11 +6,14 @@ import (
 	"reflect"
 
 	"github.com/ericbg27/top10movies-api/src/datasources/database"
-	"github.com/ericbg27/top10movies-api/src/domain/users"
 )
 
 type DatabaseClientMock struct {
-	Connected bool
+	Connected      bool
+	CanQuery       bool
+	CanQueryRow    bool
+	CanExec        bool
+	CanScanResults bool
 }
 
 type ModificationResultMock struct {
@@ -18,12 +21,14 @@ type ModificationResultMock struct {
 }
 
 type UsersSingleElementResultMock struct {
-	result users.User
+	result  interface{}
+	CanScan bool
 }
 
 type UsersMultipleElementsResultMock struct {
-	results   []users.User
+	results   []interface{}
 	scanIndex int
+	CanScan   bool
 }
 
 func (d *DatabaseClientMock) SetupDbConnection() {
@@ -34,14 +39,22 @@ func (d *DatabaseClientMock) CloseDbConnection(ctx context.Context) {
 	d.Connected = false
 }
 
-func (d *DatabaseClientMock) Query(ctx context.Context, query string, arguments interface{}) (database.MultipleElementsResult, error) {
-	if query == "error" {
+func (d *DatabaseClientMock) Query(ctx context.Context, query string, arguments ...interface{}) (database.MultipleElementsResult, error) {
+	if !d.CanQuery {
 		return nil, errors.New("unable to query")
 	}
 
-	var usersResult []users.User
+	var usersResult []interface{}
 
-	usersResult = append(usersResult, users.User{
+	usersResult = append(usersResult, struct {
+		ID          int64
+		FirstName   string
+		LastName    string
+		Email       string
+		DateCreated string
+		Status      string
+		Password    string
+	}{
 		ID:          1,
 		FirstName:   "John",
 		LastName:    "Doe",
@@ -50,46 +63,60 @@ func (d *DatabaseClientMock) Query(ctx context.Context, query string, arguments 
 		Status:      "",
 		Password:    "1234",
 	})
-	usersResult = append(usersResult, users.User{
-		ID:          2,
-		FirstName:   "Josh",
-		LastName:    "Davis",
-		Email:       "joshdavisgmail.com",
-		DateCreated: "",
-		Status:      "",
-		Password:    "12345",
+	usersResult = append(usersResult, struct {
+		ID        int64
+		FirstName string
+		LastName  string
+		Email     string
+		Status    string
+		Password  string
+	}{
+		ID:        2,
+		FirstName: "Josh",
+		LastName:  "Davis",
+		Email:     "joshdavis@gmail.com",
+		Status:    "active",
+		Password:  "12345",
 	})
 
 	var result UsersMultipleElementsResultMock
 	result.results = usersResult
 	result.scanIndex = 0
+	result.CanScan = d.CanScanResults
 
 	return &result, nil
 }
 
-func (d *DatabaseClientMock) QueryRow(ctx context.Context, query string, arguments interface{}) (database.SingleElementResult, error) {
-	if query == "error" {
+func (d *DatabaseClientMock) QueryRow(ctx context.Context, query string, arguments ...interface{}) (database.SingleElementResult, error) {
+	if !d.CanQueryRow {
 		return nil, errors.New("unable to query row")
 	}
 
-	userResult := users.User{
-		ID:          1,
-		FirstName:   "John",
-		LastName:    "Doe",
-		Email:       "johndoe@gmail.com",
-		DateCreated: "",
-		Status:      "",
-		Password:    "1234",
+	userResult := struct {
+		ID        int64
+		FirstName string
+		LastName  string
+		Email     string
+		Status    string
+		Password  string
+	}{
+		ID:        1,
+		FirstName: "John",
+		LastName:  "Doe",
+		Email:     "johndoe@gmail.com",
+		Status:    "active",
+		Password:  "1234",
 	}
 
 	var result UsersSingleElementResultMock
 	result.result = userResult
+	result.CanScan = d.CanScanResults
 
 	return result, nil
 }
 
-func (d *DatabaseClientMock) Exec(ctx context.Context, query string, arguments interface{}) (database.ModificationResult, error) {
-	if query == "error" {
+func (d *DatabaseClientMock) Exec(ctx context.Context, query string, arguments ...interface{}) (database.ModificationResult, error) {
+	if !d.CanExec {
 		return nil, errors.New("unable to exec")
 	}
 
@@ -104,25 +131,36 @@ func (m ModificationResultMock) RowsAffected() int64 {
 }
 
 func (us UsersSingleElementResultMock) Scan(arguments ...interface{}) error {
+	if !us.CanScan {
+		return errors.New("failed to scan")
+	}
+
 	resultReflection := reflect.TypeOf(us.result)
 	resultReflectionValue := reflect.ValueOf(us.result)
 
-	if resultReflection.NumField() != len(arguments) {
+	if resultReflection.NumField() < len(arguments) {
 		return errors.New("wrong number of arguments provided in scan")
 	}
 
 	for index, arg := range arguments {
-		if reflect.TypeOf(arg) != resultReflection.Field(index).Type {
+		if reflect.TypeOf(arg).Elem() != resultReflection.Field(index).Type {
 			return errors.New("could not assert type of argument in scan")
 		}
 
-		arguments[index] = resultReflectionValue.FieldByName(resultReflection.Field(index).Name).Interface()
+		newValue := reflect.ValueOf(resultReflectionValue.FieldByName(resultReflection.Field(index).Name).Interface())
+		argCurrentValue := reflect.ValueOf(arguments[index]).Elem()
+
+		argCurrentValue.Set(newValue)
 	}
 
 	return nil
 }
 
 func (um *UsersMultipleElementsResultMock) Scan(arguments ...interface{}) error {
+	if !um.CanScan {
+		return errors.New("failed to scan")
+	}
+
 	if !um.Next() {
 		return errors.New("cannot scan result anymore")
 	}
@@ -132,16 +170,19 @@ func (um *UsersMultipleElementsResultMock) Scan(arguments ...interface{}) error 
 	resultReflection := reflect.TypeOf(resultToScan)
 	resultReflectionValue := reflect.ValueOf(resultToScan)
 
-	if resultReflection.NumField() != len(arguments) {
+	if resultReflection.NumField() < len(arguments) {
 		return errors.New("wrong number of arguments provided in scan")
 	}
 
 	for index, arg := range arguments {
-		if reflect.TypeOf(arg) != resultReflection.Field(index).Type {
+		if reflect.TypeOf(arg).Elem() != resultReflection.Field(index).Type {
 			return errors.New("could not assert type of argument in scan")
 		}
 
-		arguments[index] = resultReflectionValue.FieldByName(resultReflection.Field(index).Name).Interface()
+		newValue := reflect.ValueOf(resultReflectionValue.FieldByName(resultReflection.Field(index).Name).Interface())
+		argCurrentValue := reflect.ValueOf(arguments[index]).Elem()
+
+		argCurrentValue.Set(newValue)
 	}
 
 	um.scanIndex++
