@@ -22,6 +22,22 @@ const (
 	layoutISO = "2006-01-02"
 )
 
+type usersController struct{}
+
+type UsersControllerInterface interface {
+	Login(c *gin.Context)
+	Create(c *gin.Context)
+	Update(c *gin.Context)
+	Delete(c *gin.Context)
+	GetFavorites(c *gin.Context)
+	AddFavorite(c *gin.Context)
+	Search(c *gin.Context)
+}
+
+var (
+	UsersController UsersControllerInterface = &usersController{}
+)
+
 func getID(userIDParam string) (int64, *rest_errors.RestErr) {
 	userID, userErr := strconv.ParseInt(userIDParam, 10, 64)
 	if userErr != nil {
@@ -31,7 +47,7 @@ func getID(userIDParam string) (int64, *rest_errors.RestErr) {
 	return userID, nil
 }
 
-func Login(c *gin.Context) {
+func (u *usersController) Login(c *gin.Context) {
 	var user users.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		restErr := rest_errors.NewBadRequestError("Invalid JSON body")
@@ -73,7 +89,7 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, tokensInfo)
 }
 
-func Create(c *gin.Context) {
+func (u *usersController) Create(c *gin.Context) {
 	var user users.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		restErr := rest_errors.NewBadRequestError("Invalid JSON body")
@@ -110,7 +126,7 @@ func Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, newUser)
 }
 
-func Update(c *gin.Context) {
+func (u *usersController) Update(c *gin.Context) {
 	bearToken := c.Request.Header.Get("Authorization")
 
 	userID, err := authorization.AuthManager.FetchAuth(bearToken)
@@ -160,7 +176,7 @@ func Update(c *gin.Context) {
 	c.JSON(http.StatusOK, updatedUser)
 }
 
-func Delete(c *gin.Context) {
+func (u *usersController) Delete(c *gin.Context) {
 	bearToken := c.Request.Header.Get("Authorization")
 
 	userID, err := authorization.AuthManager.FetchAuth(bearToken)
@@ -205,7 +221,7 @@ func Delete(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func GetFavorites(c *gin.Context) {
+func (u *usersController) GetFavorites(c *gin.Context) {
 	userID, IdErr := getID(c.Param("user_id"))
 	if IdErr != nil {
 		c.JSON(IdErr.Status, IdErr)
@@ -252,7 +268,7 @@ func GetFavorites(c *gin.Context) {
 	c.JSON(http.StatusOK, usrFav)
 }
 
-func AddFavorite(c *gin.Context) {
+func (u *usersController) AddFavorite(c *gin.Context) {
 	bearToken := c.Request.Header.Get("Authorization")
 
 	userID, err := authorization.AuthManager.FetchAuth(bearToken)
@@ -317,7 +333,7 @@ func AddFavorite(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func Search(c *gin.Context) {
+func (u *usersController) Search(c *gin.Context) {
 	queryParams := make(map[string]string)
 
 	for queryKey, queryVal := range c.Request.URL.Query() {

@@ -1,13 +1,26 @@
 package users
 
 import (
+	"context"
 	"os"
 	"testing"
 
+	"github.com/ericbg27/top10movies-api/src/mocks/database"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
+	db = &database.DatabaseClientMock{
+		Connected:      false,
+		CanQuery:       true,
+		CanQueryRow:    true,
+		CanExec:        true,
+		CanScanResults: true,
+	}
+
+	db.SetupDbConnection()
+	defer db.CloseDbConnection(context.Background())
+
 	os.Exit(m.Run())
 }
 

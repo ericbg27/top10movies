@@ -118,7 +118,7 @@ func TestLoginSuccess(t *testing.T) {
 
 	w := PrepareTest(exampleJsonReq, "POST")
 
-	Login(c)
+	UsersController.Login(c)
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -145,7 +145,7 @@ func TestLoginWrongPassword(t *testing.T) {
 
 	w := PrepareTest(exampleJsonReq, "POST")
 
-	Login(c)
+	UsersController.Login(c)
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -167,7 +167,7 @@ func TestLoginInvalidJSON(t *testing.T) {
 
 	w := PrepareTest(exampleJsonReq, "POST")
 
-	Login(c)
+	UsersController.Login(c)
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -194,7 +194,7 @@ func TestLoginUserNotFound(t *testing.T) {
 
 	w := PrepareTest(exampleJsonReq, "POST")
 
-	Login(c)
+	UsersController.Login(c)
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -223,7 +223,7 @@ func TestCreateSuccess(t *testing.T) {
 
 	w := PrepareTest(exampleJsonReq, "POST")
 
-	Create(c)
+	UsersController.Create(c)
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -249,7 +249,7 @@ func TestCreateInvalidJSON(t *testing.T) {
 
 	w := PrepareTest(exampleJsonReq, "POST")
 
-	Create(c)
+	UsersController.Create(c)
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -276,7 +276,7 @@ func TestCreateSaveError(t *testing.T) {
 
 	w := PrepareTest(exampleJsonReq, "POST")
 
-	Create(c)
+	UsersController.Create(c)
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -307,7 +307,7 @@ func TestUpdateSuccess(t *testing.T) {
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 	c.Request.Header.Set("Authorization", "token_1")
 
-	Update(c)
+	UsersController.Update(c)
 
 	c.Params = make([]gin.Param, 0)
 	c.Request.Header.Del("Authorization")
@@ -342,7 +342,7 @@ func TestUpdatePartialSuccess(t *testing.T) {
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 	c.Request.Header.Set("Authorization", "token_1")
 
-	Update(c)
+	UsersController.Update(c)
 
 	c.Params = make([]gin.Param, 0)
 	c.Request.Header.Del("Authorization")
@@ -376,7 +376,7 @@ func TestUpdateInvalidUserID(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "POST")
 	c.Request.Header.Set("Authorization", "token_1")
 
-	Update(c)
+	UsersController.Update(c)
 
 	c.Request.Header.Del("Authorization")
 
@@ -410,7 +410,7 @@ func TestUpdateInvalidToken(t *testing.T) {
 
 	authorization.AuthManager.(*authorization_mock.AuthorizationMock).Authorized = false
 
-	Update(c)
+	UsersController.Update(c)
 
 	authorization.AuthManager.(*authorization_mock.AuthorizationMock).Authorized = true
 
@@ -446,7 +446,7 @@ func TestUpdateWrongTokenID(t *testing.T) {
 
 	authorization.AuthManager.(*authorization_mock.AuthorizationMock).WrongID = true
 
-	Update(c)
+	UsersController.Update(c)
 
 	authorization.AuthManager.(*authorization_mock.AuthorizationMock).WrongID = false
 
@@ -475,7 +475,7 @@ func TestUpdateInvalidJSONBody(t *testing.T) {
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 	c.Request.Header.Set("Authorization", "token_1")
 
-	Update(c)
+	UsersController.Update(c)
 
 	c.Params = make([]gin.Param, 0)
 	c.Request.Header.Del("Authorization")
@@ -509,7 +509,7 @@ func TestUpdateSaveError(t *testing.T) {
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "2"})
 	c.Request.Header.Set("Authorization", "token_2")
 
-	Update(c)
+	UsersController.Update(c)
 
 	c.Params = make([]gin.Param, 0)
 	c.Request.Header.Del("Authorization")
@@ -543,7 +543,7 @@ func TestDeleteSuccess(t *testing.T) {
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 	c.Request.Header.Set("Authorization", "token_1")
 
-	Delete(c)
+	UsersController.Delete(c)
 
 	c.Params = make([]gin.Param, 0)
 	c.Request.Header.Del("Authorization")
@@ -570,7 +570,7 @@ func TestDeleteInvalidUserID(t *testing.T) {
 	w := PrepareTest(exampleJsonReq, "Delete")
 	c.Request.Header.Set("Authorization", "token_1")
 
-	Delete(c)
+	UsersController.Delete(c)
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 	c.Request.Header.Del("Authorization")
@@ -596,7 +596,7 @@ func TestDeleteInvalidJSONBody(t *testing.T) {
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 	c.Request.Header.Set("Authorization", "token_1")
 
-	Delete(c)
+	UsersController.Delete(c)
 
 	c.Params = make([]gin.Param, 0)
 	c.Request.Header.Del("Authorization")
@@ -629,7 +629,7 @@ func TestDeleteDeleteError(t *testing.T) {
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "2"})
 	c.Request.Header.Set("Authorization", "token_2")
 
-	Delete(c)
+	UsersController.Delete(c)
 
 	c.Params = make([]gin.Param, 0)
 	c.Request.Header.Del("Authorization")
@@ -661,7 +661,7 @@ func TestGetFavoritesSuccessCached(t *testing.T) {
 
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 
-	GetFavorites(c)
+	UsersController.GetFavorites(c)
 
 	c.Params = make([]gin.Param, 0)
 
@@ -694,7 +694,7 @@ func TestGetFavoritesSuccessNotCached(t *testing.T) {
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).FavoriteCached = false
 
-	GetFavorites(c)
+	UsersController.GetFavorites(c)
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).FavoriteCached = true
 
@@ -728,7 +728,7 @@ func TestGetFavoritesInvalidUserID(t *testing.T) {
 
 	w := PrepareTest(exampleJsonReq, "GET")
 
-	GetFavorites(c)
+	UsersController.GetFavorites(c)
 
 	responseData, _ := ioutil.ReadAll(w.Body)
 
@@ -759,7 +759,7 @@ func TestGetFavoritesFailure(t *testing.T) {
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanGetFavorites = false
 
-	GetFavorites(c)
+	UsersController.GetFavorites(c)
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanGetFavorites = true
 
@@ -797,7 +797,7 @@ func TestAddFavoritesSuccessMovieCached(t *testing.T) {
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 	c.Request.Header.Set("Authorization", "token_1")
 
-	AddFavorite(c)
+	UsersController.AddFavorite(c)
 
 	c.Params = make([]gin.Param, 0)
 	c.Request.Header.Del("Authorization")
@@ -832,7 +832,7 @@ func TestAddFavoritesSuccessMovieNotCached(t *testing.T) {
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = false
 
-	AddFavorite(c)
+	UsersController.AddFavorite(c)
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = true
 
@@ -866,7 +866,7 @@ func TestAddFavoritesInvalidUserID(t *testing.T) {
 
 	c.Request.Header.Set("Authorization", "token_1")
 
-	AddFavorite(c)
+	UsersController.AddFavorite(c)
 
 	c.Request.Header.Del("Authorization")
 
@@ -893,7 +893,7 @@ func TestAddFavoritesInvalidJSONBody(t *testing.T) {
 	c.Params = append(c.Params, gin.Param{Key: "user_id", Value: "1"})
 	c.Request.Header.Set("Authorization", "token_1")
 
-	AddFavorite(c)
+	UsersController.AddFavorite(c)
 
 	c.Params = make([]gin.Param, 0)
 	c.Request.Header.Del("Authorization")
@@ -931,7 +931,7 @@ func TestAddFavoritesGetMovieError(t *testing.T) {
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanGetMovie = false
 
-	AddFavorite(c)
+	UsersController.AddFavorite(c)
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanGetMovie = true
 
@@ -972,7 +972,7 @@ func TestAddFavoritesAddMovieErrorWhenNotCached(t *testing.T) {
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = false
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanAddMovie = false
 
-	AddFavorite(c)
+	UsersController.AddFavorite(c)
 
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).HasMovieCached = true
 	movies_service.MoviesService.(*movies_service_mock.MoviesServiceMock).CanAddMovie = true
@@ -1013,7 +1013,7 @@ func TestAddFavoritesAddFavoriteError(t *testing.T) {
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanAddFavorite = false
 
-	AddFavorite(c)
+	UsersController.AddFavorite(c)
 
 	users_service.UsersService.(*users_service_mock.UsersServiceMock).CanAddFavorite = false
 

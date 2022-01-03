@@ -1,6 +1,7 @@
 package users_service
 
 import (
+	"github.com/ericbg27/top10movies-api/src/datasources/database"
 	"github.com/ericbg27/top10movies-api/src/domain/user_favorites"
 	"github.com/ericbg27/top10movies-api/src/domain/users"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
@@ -14,9 +15,14 @@ var (
 )
 
 type UsersServiceMock struct {
+	db              database.DatabaseClient
 	CanGetFavorites bool
 	CanAddFavorite  bool
 	FavoriteCached  bool
+}
+
+func (u *UsersServiceMock) SetupDBClient(dbClient database.DatabaseClient) {
+	u.db = dbClient
 }
 
 func (u *UsersServiceMock) CreateUser(user users.UserInterface) (users.UserInterface, *rest_errors.RestErr) {

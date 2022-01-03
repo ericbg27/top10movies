@@ -4,6 +4,7 @@ import (
 	"net/mail"
 	"strings"
 
+	"github.com/ericbg27/top10movies-api/src/datasources/database"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 )
 
@@ -13,12 +14,12 @@ const (
 
 type UserInterface interface {
 	Validate() (UserInterface, *rest_errors.RestErr)
-	Get() (UserInterface, *rest_errors.RestErr)
-	GetById() (UserInterface, *rest_errors.RestErr)
-	Save() *rest_errors.RestErr
-	Update(newUser UserInterface, isPartial bool) (UserInterface, *rest_errors.RestErr)
-	Delete() *rest_errors.RestErr
-	Search() ([]UserInterface, *rest_errors.RestErr)
+	Get(database.DatabaseClient) (UserInterface, *rest_errors.RestErr)
+	GetById(database.DatabaseClient) (UserInterface, *rest_errors.RestErr)
+	Save(database.DatabaseClient) *rest_errors.RestErr
+	Update(UserInterface, bool, database.DatabaseClient) (UserInterface, *rest_errors.RestErr)
+	Delete(database.DatabaseClient) *rest_errors.RestErr
+	Search(database.DatabaseClient) ([]UserInterface, *rest_errors.RestErr)
 }
 
 type User struct {

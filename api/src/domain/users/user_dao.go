@@ -4,17 +4,22 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ericbg27/top10movies-api/src/datasources/postgresql/db"
+	"github.com/ericbg27/top10movies-api/src/datasources/database"
 	user_queries "github.com/ericbg27/top10movies-api/src/queries/users"
 	"github.com/ericbg27/top10movies-api/src/utils/logger"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 )
 
-func (user User) Get() (UserInterface, *rest_errors.RestErr) {
+func (user User) Get(db database.DatabaseClient) (UserInterface, *rest_errors.RestErr) {
 	savedUser := user
 
-	result := db.Client.QueryRow(context.Background(), user_queries.QueryGetUser, user.Email)
-	err := result.Scan(&savedUser.ID, &savedUser.FirstName, &savedUser.Status, &savedUser.Password)
+	result, err := db.QueryRow(context.Background(), user_queries.QueryGetUser, user.Email)
+	if err != nil {
+		logger.Error("Error when trying to get user in database", err)
+		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
+	}
+
+	err = result.Scan(&savedUser.ID, &savedUser.FirstName, &savedUser.LastName, &savedUser.Email, &savedUser.Status, &savedUser.Password)
 	if err != nil {
 		logger.Error("Error when trying to get user in database", err)
 		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
@@ -23,11 +28,16 @@ func (user User) Get() (UserInterface, *rest_errors.RestErr) {
 	return savedUser, nil
 }
 
-func (user User) GetById() (UserInterface, *rest_errors.RestErr) {
+func (user User) GetById(db database.DatabaseClient) (UserInterface, *rest_errors.RestErr) {
 	savedUser := user
 
-	result := db.Client.QueryRow(context.Background(), user_queries.QueryGetUserById, user.ID)
-	err := result.Scan(&savedUser.FirstName, &savedUser.LastName, &savedUser.Email, &savedUser.Status, &savedUser.Password)
+	result, err := db.QueryRow(context.Background(), user_queries.QueryGetUserById, user.ID)
+	if err != nil {
+		logger.Error("Error when trying to get user by id in database", err)
+		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
+	}
+
+	err = result.Scan(&savedUser.ID, &savedUser.FirstName, &savedUser.LastName, &savedUser.Email, &savedUser.Status, &savedUser.Password)
 	if err != nil {
 		logger.Error("Error when trying to get user by id in database", err)
 		return nil, rest_errors.NewInternalServerError("Error when trying to get user")
@@ -36,8 +46,8 @@ func (user User) GetById() (UserInterface, *rest_errors.RestErr) {
 	return savedUser, nil
 }
 
-func (user User) Save() *rest_errors.RestErr {
-	result, err := db.Client.Exec(context.Background(), user_queries.QueryInsertUser, user.FirstName, user.LastName, user.Email, user.DateCreated, user.Status, user.Password)
+func (user User) Save(db database.DatabaseClient) *rest_errors.RestErr {
+	result, err := db.Exec(context.Background(), user_queries.QueryInsertUser, user.FirstName, user.LastName, user.Email, user.DateCreated, user.Status, user.Password)
 	if err != nil {
 		logger.Error("Error when trying to save user in database", err)
 		return rest_errors.NewInternalServerError("Error when trying to save user")
@@ -48,7 +58,7 @@ func (user User) Save() *rest_errors.RestErr {
 	return nil
 }
 
-func (user User) Update(newUser UserInterface, isPartial bool) (UserInterface, *rest_errors.RestErr) {
+func (user User) Update(newUser UserInterface, isPartial bool, db database.DatabaseClient) (UserInterface, *rest_errors.RestErr) {
 	toUpdateUser := newUser.(User)
 
 	if isPartial {
@@ -73,7 +83,7 @@ func (user User) Update(newUser UserInterface, isPartial bool) (UserInterface, *
 	}
 	user = validatedUser.(User)
 
-	result, err := db.Client.Exec(context.Background(), user_queries.QueryUpdateUser, user.FirstName, user.LastName, user.Email, user.ID)
+	result, err := db.Exec(context.Background(), user_queries.QueryUpdateUser, user.FirstName, user.LastName, user.Email, user.ID)
 	if err != nil {
 		logger.Error("Error when trying to update user in database", err)
 		return nil, rest_errors.NewInternalServerError("Error when trying to update user")
@@ -84,8 +94,8 @@ func (user User) Update(newUser UserInterface, isPartial bool) (UserInterface, *
 	return user, nil
 }
 
-func (user User) Delete() *rest_errors.RestErr {
-	result, err := db.Client.Exec(context.Background(), user_queries.QueryDeleteUser, user.ID)
+func (user User) Delete(db database.DatabaseClient) *rest_errors.RestErr {
+	result, err := db.Exec(context.Background(), user_queries.QueryDeleteUser, user.ID)
 	if err != nil {
 		logger.Error("Error when trying to delete user in database", err)
 		return rest_errors.NewInternalServerError("Error when trying to delete user")
@@ -96,8 +106,8 @@ func (user User) Delete() *rest_errors.RestErr {
 	return nil
 }
 
-func (user User) Search() ([]UserInterface, *rest_errors.RestErr) {
-	result, err := db.Client.Query(context.Background(), user_queries.QuerySearchUser, user.FirstName, user.LastName)
+func (user User) Search(db database.DatabaseClient) ([]UserInterface, *rest_errors.RestErr) {
+	result, err := db.Query(context.Background(), user_queries.QuerySearchUser, user.FirstName, user.LastName)
 	if err != nil {
 		logger.Error("Error when trying to search user in database", err)
 		return nil, rest_errors.NewInternalServerError("Error when trying to search user")
@@ -107,11 +117,13 @@ func (user User) Search() ([]UserInterface, *rest_errors.RestErr) {
 	for result.Next() {
 		var searchedUser User
 
-		err = result.Scan(&searchedUser.ID, &searchedUser.FirstName, &searchedUser.LastName, &searchedUser.Email)
+		err = result.Scan(&searchedUser.ID, &searchedUser.FirstName, &searchedUser.LastName, &searchedUser.Email, &searchedUser.Status, &searchedUser.Password)
 		if err != nil {
 			logger.Error("Error when trying to search user in database", err)
 			return nil, rest_errors.NewInternalServerError("Error when trying to search user")
 		}
+
+		searchedUser.Password = ""
 
 		foundUsers = append(foundUsers, searchedUser)
 	}
