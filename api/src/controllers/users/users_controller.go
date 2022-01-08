@@ -47,6 +47,12 @@ func getID(userIDParam string) (int64, *rest_errors.RestErr) {
 	return userID, nil
 }
 
+func NewUsersController() *usersController {
+	m := &usersController{}
+
+	return m
+}
+
 func (u *usersController) Login(c *gin.Context) {
 	var user users.User
 	if err := c.ShouldBindJSON(&user); err != nil {

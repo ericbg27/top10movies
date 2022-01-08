@@ -8,7 +8,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Search(c *gin.Context) {
+type moviesController struct{}
+
+type MoviesControllerInterface interface {
+	Search(c *gin.Context)
+}
+
+func NewMoviesController() *moviesController {
+	m := &moviesController{}
+
+	return m
+}
+
+func (m *moviesController) Search(c *gin.Context) {
 	queryParams := make(map[string]string)
 
 	for queryKey, queryVal := range c.Request.URL.Query() {
