@@ -8,14 +8,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type moviesController struct{}
+type moviesController struct {
+	moviesService movies_service.MoviesServiceInterface
+}
 
 type MoviesControllerInterface interface {
 	Search(c *gin.Context)
 }
 
-func NewMoviesController() *moviesController {
-	m := &moviesController{}
+func NewMoviesController(moviesService movies_service.MoviesServiceInterface) *moviesController {
+	m := &moviesController{
+		moviesService: moviesService,
+	}
 
 	return m
 }
@@ -29,7 +33,7 @@ func (m *moviesController) Search(c *gin.Context) {
 
 	queryParams[movies_service.QueryParam] = strings.ReplaceAll(queryParams[movies_service.QueryParam], "+", " ")
 
-	result, searchErr := movies_service.MoviesService.SearchMovies(queryParams)
+	result, searchErr := m.moviesService.SearchMovies(queryParams)
 	if searchErr != nil {
 		c.JSON(searchErr.Status, searchErr)
 

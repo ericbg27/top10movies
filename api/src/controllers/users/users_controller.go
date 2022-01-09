@@ -22,7 +22,11 @@ const (
 	layoutISO = "2006-01-02"
 )
 
-type usersController struct{}
+type usersController struct {
+	usersService         users_service.UsersServiceInterface
+	moviesService        movies_service.MoviesServiceInterface
+	authorizationManager authorization.AuthorizationManagerInterface
+}
 
 type UsersControllerInterface interface {
 	Login(c *gin.Context)
@@ -34,10 +38,6 @@ type UsersControllerInterface interface {
 	Search(c *gin.Context)
 }
 
-var (
-	UsersController UsersControllerInterface = &usersController{}
-)
-
 func getID(userIDParam string) (int64, *rest_errors.RestErr) {
 	userID, userErr := strconv.ParseInt(userIDParam, 10, 64)
 	if userErr != nil {
@@ -47,8 +47,13 @@ func getID(userIDParam string) (int64, *rest_errors.RestErr) {
 	return userID, nil
 }
 
-func NewUsersController() *usersController {
-	m := &usersController{}
+func NewUsersController(us users_service.UsersServiceInterface, ms movies_service.MoviesServiceInterface,
+	am authorization.AuthorizationManagerInterface) *usersController {
+	m := &usersController{
+		usersService:         us,
+		moviesService:        ms,
+		authorizationManager: am,
+	}
 
 	return m
 }
@@ -62,7 +67,7 @@ func (u *usersController) Login(c *gin.Context) {
 		return
 	}
 
-	result, getErr := users_service.UsersService.GetUser(user)
+	result, getErr := u.usersService.GetUser(user)
 	if getErr != nil {
 		c.JSON(getErr.Status, getErr)
 
@@ -118,7 +123,7 @@ func (u *usersController) Create(c *gin.Context) {
 
 	user.Password = string(hashedPass)
 
-	result, saveErr := users_service.UsersService.CreateUser(user)
+	result, saveErr := u.usersService.CreateUser(user)
 	if saveErr != nil {
 		c.JSON(saveErr.Status, saveErr)
 
@@ -169,7 +174,7 @@ func (u *usersController) Update(c *gin.Context) {
 
 	isPartial := c.Request.Method == http.MethodPatch
 
-	result, updateErr := users_service.UsersService.UpdateUser(user, isPartial)
+	result, updateErr := u.usersService.UpdateUser(user, isPartial)
 	if updateErr != nil {
 		c.JSON(updateErr.Status, updateErr)
 
@@ -217,7 +222,7 @@ func (u *usersController) Delete(c *gin.Context) {
 
 	user.ID = int64(userID)
 
-	deleteErr := users_service.UsersService.DeleteUser(user)
+	deleteErr := u.usersService.DeleteUser(user)
 	if deleteErr != nil {
 		c.JSON(deleteErr.Status, deleteErr)
 
@@ -238,7 +243,7 @@ func (u *usersController) GetFavorites(c *gin.Context) {
 	var usrFav user_favorites.UserFavorites
 	usrFav.UserID = userID
 
-	userFavorites, cachedFavorites, getErr := users_service.UsersService.GetUserFavorites(usrFav)
+	userFavorites, cachedFavorites, getErr := u.usersService.GetUserFavorites(usrFav)
 	if getErr != nil {
 		c.JSON(getErr.Status, getErr)
 
@@ -252,7 +257,7 @@ func (u *usersController) GetFavorites(c *gin.Context) {
 			var movie movies.MovieInfo
 			movie.Movie.ID = movieId
 
-			movieResult, err := movies_service.MoviesService.GetMovieById(movie.Movie.ID)
+			movieResult, err := u.moviesService.GetMovieById(movie.Movie.ID)
 			if err != nil { // TODO: Do we return an error if one of the favorites is not found?
 				c.JSON(err.Status, err)
 
@@ -260,7 +265,7 @@ func (u *usersController) GetFavorites(c *gin.Context) {
 			}
 
 			movie.Movie = *movieResult
-			addErr := movies_service.MoviesService.AddMovie(movie)
+			addErr := u.moviesService.AddMovie(movie)
 			if addErr != nil { // TODO: Do we return an error if we fail to save in cache? Maybe just log!
 				c.JSON(addErr.Status, addErr)
 
@@ -308,7 +313,7 @@ func (u *usersController) AddFavorite(c *gin.Context) {
 		return
 	}
 
-	movieCacheResult, cacheErr := movies_service.MoviesService.GetMovieFromCache(movie)
+	movieCacheResult, cacheErr := u.moviesService.GetMovieFromCache(movie)
 	if cacheErr != nil {
 		c.JSON(cacheErr.Status, cacheErr)
 
@@ -317,7 +322,7 @@ func (u *usersController) AddFavorite(c *gin.Context) {
 
 	movieCache := movieCacheResult.(movies.MovieInfo)
 	if movieCache.Movie.ID == -1 { // Movie is not cached
-		addErr := movies_service.MoviesService.AddMovie(movie)
+		addErr := u.moviesService.AddMovie(movie)
 		if addErr != nil { // TODO: Do we return an error if we fail to save in cache? Maybe just log!
 			c.JSON(addErr.Status, addErr)
 
@@ -329,7 +334,7 @@ func (u *usersController) AddFavorite(c *gin.Context) {
 	userFavorite.UserID = int64(userID)
 	userFavorite.MoviesIDs = append(userFavorite.MoviesIDs, movie.Movie.ID)
 
-	addErr := users_service.UsersService.AddUserFavorite(userFavorite)
+	addErr := u.usersService.AddUserFavorite(userFavorite)
 	if addErr != nil {
 		c.JSON(addErr.Status, addErr)
 
@@ -354,7 +359,7 @@ func (u *usersController) Search(c *gin.Context) {
 	userToSearch.FirstName = queryArray[0]
 	userToSearch.LastName = strings.Join(queryArray[1:], " ")
 
-	foundUsers, searchErr := users_service.UsersService.SearchUser(userToSearch)
+	foundUsers, searchErr := u.usersService.SearchUser(userToSearch)
 	if searchErr != nil {
 		c.JSON(searchErr.Status, searchErr)
 

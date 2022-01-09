@@ -15,7 +15,7 @@ import (
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 )
 
-func (u UserFavorites) GetFavorites(db database.DatabaseClient) (UserFavoritesInterface, map[int]bool, *rest_errors.RestErr) {
+func (u UserFavorites) GetFavorites(db database.DatabaseClient, redisClient redisdb.RedisClient) (UserFavoritesInterface, map[int]bool, *rest_errors.RestErr) {
 	result, err := db.Query(context.Background(), user_favorites_queries.QueryGetUserFavoritesIds, u.UserID)
 	if err != nil {
 		logger.Error("Error when trying to get user favorites", err)
@@ -42,7 +42,7 @@ func (u UserFavorites) GetFavorites(db database.DatabaseClient) (UserFavoritesIn
 		movieRedisKey.WriteString("movie:")
 		movieRedisKey.WriteString(strconv.Itoa(movieId))
 
-		redisResult, redisErr := redisdb.Client.Get(movieRedisKey.String()).Result()
+		redisResult, redisErr := redisClient.Client.Get(movieRedisKey.String()).Result()
 		if redisErr != nil && redisErr != redisdb.RedisNil { // Do we throw an error here? Maybe just log!
 			logger.Error("Error when trying to get user favorites", redisErr)
 			return nil, nil, rest_errors.NewInternalServerError("Error when trying to get user favorites")

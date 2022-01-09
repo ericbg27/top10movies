@@ -31,10 +31,9 @@ const (
 	messageKey     = "message"
 )
 
-func init() {
-	cfg := config.GetConfig()
-
+func SetupLogger(cfg *config.Config) {
 	var err error
+
 	log.log, err = setupLogger(cfg)
 	if err != nil {
 		panic(err)

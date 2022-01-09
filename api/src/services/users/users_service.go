@@ -2,17 +2,18 @@ package users_service
 
 import (
 	"github.com/ericbg27/top10movies-api/src/datasources/database"
+	redisdb "github.com/ericbg27/top10movies-api/src/datasources/redis"
 	"github.com/ericbg27/top10movies-api/src/domain/user_favorites"
 	"github.com/ericbg27/top10movies-api/src/domain/users"
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 )
 
 type usersService struct {
-	db database.DatabaseClient
+	db          database.DatabaseClient
+	redisClient redisdb.RedisClient
 }
 
-type usersServiceInterface interface {
-	SetupDBClient(database.DatabaseClient)
+type UsersServiceInterface interface {
 	CreateUser(users.UserInterface) (users.UserInterface, *rest_errors.RestErr)
 	GetUser(users.UserInterface) (users.UserInterface, *rest_errors.RestErr)
 	UpdateUser(users.UserInterface, bool) (users.UserInterface, *rest_errors.RestErr)
@@ -26,12 +27,13 @@ const (
 	QueryParam = "query"
 )
 
-var (
-	UsersService usersServiceInterface = &usersService{}
-)
+func NewUsersService(db database.DatabaseClient, rc redisdb.RedisClient) *usersService {
+	m := &usersService{
+		db:          db,
+		redisClient: rc,
+	}
 
-func (s *usersService) SetupDBClient(dbClient database.DatabaseClient) {
-	s.db = dbClient
+	return m
 }
 
 func (s *usersService) GetUser(user users.UserInterface) (users.UserInterface, *rest_errors.RestErr) {
@@ -96,7 +98,7 @@ func (s *usersService) GetUserFavorites(userFavorites user_favorites.UserFavorit
 	var cachedIds map[int]bool
 	var err *rest_errors.RestErr
 
-	if currentUserFavorites, cachedIds, err = userFavorites.GetFavorites(s.db); err != nil {
+	if currentUserFavorites, cachedIds, err = userFavorites.GetFavorites(s.db, s.redisClient); err != nil {
 		return nil, nil, err
 	}
 

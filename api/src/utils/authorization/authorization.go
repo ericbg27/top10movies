@@ -31,22 +31,28 @@ type AuthorizationManagerInterface interface {
 	FetchAuth(bearToken string) (uint64, error)
 }
 
-type AuthorizationManager struct {
+type authorizationManager struct {
 	accessSecret  string
 	refreshSecret string
+	redisClient   *redisdb.RedisClient
 }
 
 var (
-	AuthManager AuthorizationManagerInterface = &AuthorizationManager{}
+	AuthManager AuthorizationManagerInterface = &authorizationManager{}
 )
 
 // TODO: Get environment variable names from config
-func init() {
-	AuthManager.(*AuthorizationManager).accessSecret = os.Getenv("TOP10MOVIES_ACCESS_SECRET")
-	AuthManager.(*AuthorizationManager).refreshSecret = os.Getenv("TOP10MOVIES_REFRESH_SECRET")
+func NewAuthorizationManager(redisClient *redisdb.RedisClient) *authorizationManager {
+	authManager := &authorizationManager{
+		accessSecret:  os.Getenv("TOP10MOVIES_ACCESS_SECRET"),
+		refreshSecret: os.Getenv("TOP10MOVIES_REFRESH_SECRET"),
+		redisClient:   redisClient,
+	}
+
+	return authManager
 }
 
-func (a AuthorizationManager) CreateToken(userId int64) (*TokenDetails, error) {
+func (a authorizationManager) CreateToken(userId int64) (*TokenDetails, error) {
 	tokenInfo := &TokenDetails{}
 
 	tokenInfo.AtExpires = time.Now().Add(time.Minute * 15).Unix()
@@ -90,17 +96,17 @@ func (a AuthorizationManager) CreateToken(userId int64) (*TokenDetails, error) {
 	return tokenInfo, nil
 }
 
-func (a AuthorizationManager) saveTokenMetadata(userId int64, tokenInfo *TokenDetails) error {
+func (a authorizationManager) saveTokenMetadata(userId int64, tokenInfo *TokenDetails) error {
 	at := time.Unix(tokenInfo.AtExpires, 0)
 	rt := time.Unix(tokenInfo.RtExpires, 0)
 	now := time.Now()
 
-	errAccess := redisdb.Client.Set(tokenInfo.AccessUuid, strconv.Itoa(int(userId)), at.Sub(now)).Err()
+	errAccess := a.redisClient.Client.Set(tokenInfo.AccessUuid, strconv.Itoa(int(userId)), at.Sub(now)).Err()
 	if errAccess != nil {
 		return errAccess
 	}
 
-	errRefresh := redisdb.Client.Set(tokenInfo.RefreshUuid, strconv.Itoa(int(userId)), rt.Sub(now)).Err()
+	errRefresh := a.redisClient.Client.Set(tokenInfo.RefreshUuid, strconv.Itoa(int(userId)), rt.Sub(now)).Err()
 	if errRefresh != nil {
 		return errRefresh
 	}
@@ -108,7 +114,7 @@ func (a AuthorizationManager) saveTokenMetadata(userId int64, tokenInfo *TokenDe
 	return nil
 }
 
-func (a AuthorizationManager) extractToken(bearToken string) string {
+func (a authorizationManager) extractToken(bearToken string) string {
 	bearTokenArgs := strings.Split(bearToken, " ")
 	if len(bearTokenArgs) == 2 {
 		return bearTokenArgs[1]
@@ -117,7 +123,7 @@ func (a AuthorizationManager) extractToken(bearToken string) string {
 	return ""
 }
 
-func (a AuthorizationManager) verifyToken(bearToken string) (*jwt.Token, error) {
+func (a authorizationManager) verifyToken(bearToken string) (*jwt.Token, error) {
 	tokenString := a.extractToken(bearToken)
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -139,7 +145,7 @@ func (a AuthorizationManager) verifyToken(bearToken string) (*jwt.Token, error) 
 	return token, nil
 }
 
-func (a AuthorizationManager) extractTokenMetadata(bearToken string) (*AccessDetails, error) {
+func (a authorizationManager) extractTokenMetadata(bearToken string) (*AccessDetails, error) {
 	token, err := a.verifyToken(bearToken)
 	if err != nil {
 		return nil, err
@@ -166,13 +172,13 @@ func (a AuthorizationManager) extractTokenMetadata(bearToken string) (*AccessDet
 	return nil, err
 }
 
-func (a AuthorizationManager) FetchAuth(bearToken string) (uint64, error) {
+func (a authorizationManager) FetchAuth(bearToken string) (uint64, error) {
 	accessDetails, err := a.extractTokenMetadata(bearToken)
 	if err != nil {
 		return 0, err
 	}
 
-	userId, err := redisdb.Client.Get(accessDetails.accessUuid).Result()
+	userId, err := a.redisClient.Client.Get(accessDetails.accessUuid).Result()
 	if err != nil {
 		return 0, err
 	}

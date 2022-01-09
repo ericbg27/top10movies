@@ -3,11 +3,13 @@ package movies
 import (
 	"github.com/ericbg27/top10movies-api/src/utils/rest_errors"
 	"github.com/ryanbradynd05/go-tmdb"
+
+	redisdb "github.com/ericbg27/top10movies-api/src/datasources/redis"
 )
 
 type MovieInterface interface {
-	AddMovie() *rest_errors.RestErr
-	GetMovie() (MovieInterface, *rest_errors.RestErr)
+	AddMovie(redisClient *redisdb.RedisClient) *rest_errors.RestErr
+	GetMovie(redisClient *redisdb.RedisClient) (MovieInterface, *rest_errors.RestErr)
 }
 
 type MovieInfo struct {

@@ -11,8 +11,11 @@ import (
 	postgresdb "github.com/ericbg27/top10movies-api/src/datasources/postgresql/db"
 	redisdb "github.com/ericbg27/top10movies-api/src/datasources/redis"
 	"github.com/ericbg27/top10movies-api/src/server"
+	movies_service "github.com/ericbg27/top10movies-api/src/services/movies"
 	users_service "github.com/ericbg27/top10movies-api/src/services/users"
+	"github.com/ericbg27/top10movies-api/src/utils/authorization"
 	"github.com/ericbg27/top10movies-api/src/utils/config"
+	"github.com/ericbg27/top10movies-api/src/utils/logger"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,30 +27,33 @@ func main() {
 }
 
 func startApplication() error {
+	cfg := config.GetConfig()
+
+	logger.SetupLogger(cfg)
+
 	router := gin.Default()
 
-	db := &postgresdb.PostgresDBClient{
-		Client: nil,
-	}
+	db := postgresdb.NewPostgresDBClient(cfg.Database)
 
 	db.SetupDbConnection()
 	defer db.CloseDbConnection(context.Background())
 
-	users_service.UsersService.SetupDBClient(db)
+	redisClient := &redisdb.RedisClient{}
+	redisClient.SetupRedisConnection(cfg.Redis.CacheTtl)
 
-	usersController := users_controller.NewUsersController()
-	moviesController := movies_controller.NewMoviesController()
+	authorizationManager := authorization.NewAuthorizationManager(redisClient)
 
-	redisdb.SetupRedisConnection()
+	usersService := users_service.NewUsersService(db, *redisClient)
+	moviesService := movies_service.NewMoviesService(redisClient, cfg)
+
+	usersController := users_controller.NewUsersController(usersService, moviesService, authorizationManager)
+	moviesController := movies_controller.NewMoviesController(moviesService)
 
 	s := &server.Server{
-		Db:               db,
 		Router:           router,
 		UsersController:  usersController,
 		MoviesController: moviesController,
 	}
-
-	cfg := config.GetConfig()
 
 	var sb strings.Builder
 
@@ -55,5 +61,5 @@ func startApplication() error {
 	sb.WriteString(":")
 	sb.WriteString(strings.TrimSpace(cfg.Server.Port))
 
-	return s.StartApplication(sb.String())
+	return s.StartServer(sb.String())
 }

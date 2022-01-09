@@ -14,19 +14,22 @@ import (
 
 type PostgresDBClient struct {
 	Client *pgxpool.Conn
+	cfg    config.DatabaseCfg
 }
 
-var (
-	host     = config.GetConfig().Database.Host
-	port     = config.GetConfig().Database.Port
-	user     = config.GetConfig().Database.User
-	password = config.GetConfig().Database.Password
-	dbname   = config.GetConfig().Database.DbName
-	loglevel = config.GetConfig().Database.LogLevel
-)
+var ()
+
+func NewPostgresDBClient(cfg config.DatabaseCfg) *PostgresDBClient {
+	pgClient := &PostgresDBClient{
+		Client: nil,
+		cfg:    cfg,
+	}
+
+	return pgClient
+}
 
 func (p *PostgresDBClient) SetupDbConnection() {
-	config, err := pgxpool.ParseConfig(fmt.Sprintf("postgres://%s:%s@%s:%d/%s", user, password, host, port, dbname))
+	config, err := pgxpool.ParseConfig(fmt.Sprintf("postgres://%s:%s@%s:%d/%s", p.cfg.User, p.cfg.Password, p.cfg.Host, p.cfg.Port, p.cfg.DbName))
 	if err != nil {
 		logger.Error("Error when parsing database connection string", err)
 		panic(err)
@@ -34,7 +37,7 @@ func (p *PostgresDBClient) SetupDbConnection() {
 
 	config.ConnConfig.Logger = logger.GetLogger()
 
-	level, err := pgx.LogLevelFromString(strings.ToLower(loglevel))
+	level, err := pgx.LogLevelFromString(strings.ToLower(p.cfg.LogLevel))
 	if err != nil {
 		level = pgx.LogLevelInfo
 	}

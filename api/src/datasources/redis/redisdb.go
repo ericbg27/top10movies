@@ -10,29 +10,32 @@ import (
 
 const (
 	localRedis = "localhost:6379"
+	RedisNil   = redis.Nil
 )
 
-var (
+type RedisClient struct {
 	Client   *redis.Client
-	RedisNil = redis.Nil
-)
+	CacheTTL int64
+}
 
-func SetupRedisConnection() {
+func (r *RedisClient) SetupRedisConnection(cacheTtl int64) {
 	dsn := os.Getenv("REDIS_DSN")
 	if len(dsn) == 0 {
 		dsn = localRedis
 	}
 
-	Client = redis.NewClient(&redis.Options{
+	r.Client = redis.NewClient(&redis.Options{
 		Addr: dsn,
 	})
 
-	_, err := Client.Ping().Result()
+	_, err := r.Client.Ping().Result()
 	if err != nil {
 		logger.Error(fmt.Sprintf("Unable to connect to Redis at %s: %s\n", dsn, err.Error()), err)
 
 		panic(err)
 	}
+
+	r.CacheTTL = cacheTtl
 
 	logger.Info(fmt.Sprintf("Connected to Redis at %s", dsn))
 }
